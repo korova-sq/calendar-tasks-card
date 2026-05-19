@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-XX-XX
+
+### Added
+
+- **Location display for calendar events**: events with a `LOCATION` field (from
+  CalDAV, Google Calendar, etc.) can now show the location below the title,
+  with a pin icon. Toggle `show_location` in the Display section.
+- **Clickable location**: when enabled, the location becomes a link that opens
+  Google Maps in a new tab with the location as the search query. Works on
+  desktop and mobile. Toggle `location_clickable` in the Display section.
+- Multi-line locations (common with CalDAV iCloud, e.g. "Rho\nMI, Italia") are
+  normalized to a single comma-separated line for clean display.
+- New localization strings for "Open in Maps" tooltip (English and Italian).
+
+### Notes
+
+- Both new toggles are OFF by default to avoid surprising existing users.
+- Only calendar events show location; todo tasks don't expose location
+  via Home Assistant's `todo.get_items` API.
+
+[1.1.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.1.0
+
 ## [1.0.0] - 2026-XX-XX
 
 First public release.

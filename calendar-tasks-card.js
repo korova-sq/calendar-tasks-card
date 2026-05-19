@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.0.0
+ * calendar-tasks-card v1.1.0
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -36,6 +36,8 @@ const DEFAULT_CONFIG = {
   show_empty_days: false,
   show_source: false,
   show_description: true,
+  show_location: false,
+  location_clickable: false,
   show_completed: true,
   completed_days: 7,
   show_overdue: true,
@@ -272,6 +274,19 @@ const STYLES = `
   }
   .ctc-event-relative.done { color: var(--ctc-hint); }
   .ctc-event-relative.overdue { color: var(--ctc-bar-overdue); font-style: normal; font-weight: 500; }
+  /* Riga "location" sotto il titolo evento: icona pin + testo, opzionalmente cliccabile */
+  .ctc-event-location {
+    font-size: 12px;
+    color: var(--ctc-muted);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.35;
+  }
+  .ctc-event-location .ctc-loc-icon { --mdc-icon-size: 14px; flex-shrink: 0; }
+  .ctc-event-location.clickable { color: var(--primary-color); cursor: pointer; text-decoration: none; }
+  .ctc-event-location.clickable:hover { text-decoration: underline; }
   .ctc-event-time {
     font-size: 12px;
     color: var(--ctc-muted);
@@ -563,6 +578,7 @@ const I18N = {
     overdue: "Scaduti",
     no_date: "Senza data",
     completed: "Completati",
+    open_in_maps: "Apri in Mappe",
     week_short: "Sett.",
     collapse_all: "Comprimi tutto",
     expand_all: "Espandi tutto",
@@ -593,6 +609,7 @@ const I18N = {
     overdue: "Overdue",
     no_date: "No date",
     completed: "Completed",
+    open_in_maps: "Open in Maps",
     week_short: "Wk",
     collapse_all: "Collapse all",
     expand_all: "Expand all",
@@ -744,6 +761,41 @@ function sanitizeDescription(raw) {
 
 function isAllDay(event) { return !event.start.dateTime; }
 function dayKey(date) { return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
+
+/* Normalizza una location multi-riga (CalDAV iCloud restituisce "Rho\nMI, Italia")
+   in una stringa pulita su singola riga per la visualizzazione.
+   Rimuove righe vuote, unisce con ", ". */
+function formatLocation(raw) {
+  if (!raw) return "";
+  const cleaned = String(raw)
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join(", ");
+  return cleaned;
+}
+
+/* Genera URL per aprire Google Maps con il luogo. Funziona su tutte le piattaforme:
+   - Desktop: apre Google Maps web
+   - iOS Safari: spesso offre di aprire in Apple Maps
+   - Android: apre Google Maps app */
+function buildMapsUrl(location) {
+  if (!location) return "";
+  const encoded = encodeURIComponent(location);
+  return `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+}
+
+/* Escape sicuro di testo per uso in attributi HTML (es. title, href).
+   Diverso da escape per body HTML perché va in contesti diversi. */
+function escapeHtmlAttribute(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 /* Parse robusto della data di scadenza di un task.
    Google Tasks può restituire:
@@ -1277,6 +1329,23 @@ class CalendarTasksCard extends HTMLElement {
           const sub = this._config.show_source !== false ? `<div class="ctc-event-sub">${ev._source.replace("calendar.", "")}</div>` : "";
           const descClean = this._config.show_description ? sanitizeDescription(ev.description) : "";
           const desc = descClean ? `<div class="ctc-event-desc">${descClean}</div>` : "";
+          // Location (solo se toggle attivo e l'evento ha una location): mostra icona pin + testo
+          // Se location_clickable è true, racchiudo in <a> che apre Google Maps in nuova tab.
+          // CalDAV iCloud spesso restituisce multi-riga ("Rho\nMI, Italia"), normalizzo con formatLocation.
+          let loc = "";
+          if (this._config.show_location && ev.location) {
+            const locText = formatLocation(ev.location);
+            if (locText) {
+              const locEscaped = escapeHtmlAttribute(locText);
+              const pinIcon = `<ha-icon class="ctc-loc-icon" icon="mdi:map-marker"></ha-icon>`;
+              if (this._config.location_clickable) {
+                const mapsUrl = buildMapsUrl(locText);
+                loc = `<a class="ctc-event-location clickable" href="${mapsUrl}" target="_blank" rel="noopener noreferrer" title="${t("open_in_maps", lang)}: ${locEscaped}" onclick="event.stopPropagation()">${pinIcon}<span>${locEscaped}</span></a>`;
+              } else {
+                loc = `<div class="ctc-event-location">${pinIcon}<span>${locEscaped}</span></div>`;
+              }
+            }
+          }
           // Tempo relativo "Manca X giorni" (per eventi è solo nel futuro, niente "scaduto")
           let rel = "";
           if (this._config.show_relative_time) {
@@ -1284,7 +1353,7 @@ class CalendarTasksCard extends HTMLElement {
             const relText = formatRelativeTime(evDate, undefined, lang);
             if (relText) rel = `<div class="ctc-event-relative">${relText}</div>`;
           }
-          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}</div>${desc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
+          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}</div>${desc}${loc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
         }).join("");
         return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
@@ -2124,6 +2193,10 @@ class CalendarTasksCardEditor extends HTMLElement {
         v => { this._config.show_source = v; this._fire(); }));
       body.appendChild(this._makeToggle("Show description", this._config.show_description !== false,
         v => { this._config.show_description = v; this._fire(); }));
+      body.appendChild(this._makeToggle("Show location (calendar events)", !!this._config.show_location,
+        v => { this._config.show_location = v; this._fire(); }));
+      body.appendChild(this._makeToggle("Make location clickable (opens maps)", !!this._config.location_clickable,
+        v => { this._config.location_clickable = v; this._fire(); }));
 
       root.appendChild(wrapper);
     }

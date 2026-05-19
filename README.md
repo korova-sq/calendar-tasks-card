@@ -4,7 +4,6 @@
 [![GitHub Release](https://img.shields.io/github/v/release/korova-sq/calendar-tasks-card)](https://github.com/korova-sq/calendar-tasks-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
 ## 🤔 What is Calendar & Tasks Card?
 
 Calendar & Tasks Card is a unified agenda view for [Home Assistant](https://www.home-assistant.io/) that combines **calendar events** and **todo tasks** in a single, clean timeline.
@@ -21,6 +20,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 📋 **No Date section**: active tasks without a due date
 - 🗂 **Completed section**: recently finished tasks for context
 - ⏱ **Relative time**: "Tomorrow", "In 3 days", "Yesterday", "1 week overdue"
+- 📍 **Event location**: shows the location of calendar events with optional click-to-maps
 - 📆 **Week numbers**: ISO 8601 week separators (toggle on/off)
 - 🔽 **Collapsible**: hide everything with one click, state persists
 - 🔄 **Force refresh**: button to update all integrations on demand
@@ -125,6 +125,8 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `show_relative_time` | `true` | "Tomorrow", "In 3 days" labels |
 | `show_source` | `false` | Show entity name as subtitle |
 | `show_description` | `true` | Show event/task description |
+| `show_location` | `false` | Show event location with map pin icon (calendar events only) |
+| `location_clickable` | `false` | Make location clickable, opens Google Maps in new tab |
 
 ### ✅ Tasks
 | Option | Default | Description |
@@ -161,6 +163,8 @@ show_overdue: true
 show_completed: true
 completed_days: 7
 allow_complete: true
+show_location: true
+location_clickable: true
 language: auto
 time_format: 24h
 first_day_of_week: monday
