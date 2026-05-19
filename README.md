@@ -231,6 +231,11 @@ See the [LICENSE](LICENSE) for full terms — this software is provided without 
 - Make sure you clicked "Save" in the editor after picking a color
 - Colors are stored in `entity_colors` in the YAML
 
+## 💬 Discussion
+
+Discussion and support thread on the Home Assistant community forum:
+[Calendar & Tasks Card on the HA community](https://community.home-assistant.io/t/calendar-tasks-card-unified-agenda-for-events-and-todos/1010940)
+
 ## 🤝 Contributing
 
 Issues and pull requests are welcome. Please:
