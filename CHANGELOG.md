@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-XX-XX
+
+### Added
+
+- **Limit visible events**: a new toggle option that, when enabled, limits the
+  number of visible events and adds a smooth internal scrollbar for the rest.
+  Combined with `max_events_visible` to set the limit (default 3).
+- **Compact mode**: a new `compact_mode` toggle reduces vertical spacing for a tighter
+  card layout. Useful for dashboards where space is limited.
+- Custom thin scrollbar styling for both WebKit (Safari/Chrome) and Firefox.
+
+### Configuration
+
+- `limit_events_visible: true/false` — enable/disable the visible events limit (default: false)
+- `max_events_visible: N` — number of events to show when the limit is enabled (default: 3)
+- `compact_mode: true/false` — reduced spacing (default: false)
+
+### Notes
+
+- All new options default to OFF/disabled, so the card behaves exactly as before
+  unless you enable them.
+- The header (title + buttons) stays fixed when scrolling internally.
+- The collapsed state still hides the body completely; the new options don't affect it.
+
+[1.2.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.2.0
+
 ## [1.1.0] - 2026-XX-XX
 
 ### Added

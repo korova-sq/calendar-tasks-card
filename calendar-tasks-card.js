@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.1.0
+ * calendar-tasks-card v1.2.0
  */
 
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -50,6 +50,9 @@ const DEFAULT_CONFIG = {
   first_day_of_week: "auto", // "auto" (segue locale), "monday", "sunday", "saturday"
   language: "auto",         // "auto" (locale del browser/HA), "en" (inglese), "it" (italiano)
   refresh_interval: 300,
+  limit_events_visible: false,    // se true, attiva la scrollbar e mostra solo max_events_visible giorni
+  max_events_visible: 3,          // numero di giorni da mostrare quando limit_events_visible è true
+  compact_mode: false,            // se true, riduce spazi verticali per card più compatta
   entity_colors: {},
   tap_action: DEFAULT_ACTION,
   hold_action: DEFAULT_ACTION,
@@ -322,6 +325,53 @@ const STYLES = `
   .ctc-collapsed .ctc-empty,
   .ctc-collapsed .ctc-empty-day,
   .ctc-collapsed .ctc-week-banner { display: none !important; }
+  /* Quando la card è collassata, anche il body wrapper si nasconde per evitare
+     spazio vuoto sotto l'header */
+  .ctc-collapsed .ctc-body { display: none !important; }
+
+  /* Container scrollabile per il contenuto della card. Quando max_events_visible è impostato,
+     il body diventa scrollabile internamente mostrando solo i primi N eventi (calcolato
+     dinamicamente in JS dopo il render). L'header rimane fisso in cima. */
+  .ctc-body {
+    /* Scrollbar customizzata per Firefox - thin e con colore discreto */
+    scrollbar-width: thin;
+    scrollbar-color: var(--ctc-border) transparent;
+    /* Arrotonda l'angolo inferiore destro per non sovrapporsi al border-radius della card */
+    border-bottom-right-radius: inherit;
+    border-bottom-left-radius: inherit;
+  }
+  /* Scrollbar per WebKit (Safari, Chrome) - sottile, discreta, con margini */
+  .ctc-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  .ctc-body::-webkit-scrollbar-track {
+    background: transparent;
+    /* Margini in alto e in basso per non attaccarsi ai bordi della card */
+    margin: 4px 0;
+  }
+  .ctc-body::-webkit-scrollbar-thumb {
+    background-color: var(--ctc-border);
+    border-radius: 4px;
+    /* Border trasparente per "rimpicciolire" visivamente il thumb e dare più spazio */
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .ctc-body::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ctc-muted);
+    background-clip: content-box;
+  }
+
+  /* Modalità compatta: riduce gli spazi verticali per card più compatta */
+  .ctc-compact .ctc-day-row { padding-top: 4px; padding-bottom: 4px; }
+  .ctc-compact .ctc-event-row { padding-top: 4px; padding-bottom: 4px; }
+  .ctc-compact .ctc-section { padding: 4px 16px 6px; }
+  .ctc-compact .ctc-section-body { gap: 3px; }
+  .ctc-compact .ctc-event-title { line-height: 1.2; }
+  .ctc-compact .ctc-event-meta { line-height: 1.2; margin-top: 1px; }
+  .ctc-compact .ctc-event-relative { margin-top: 1px; line-height: 1.2; }
+  .ctc-compact .ctc-event-location { margin-top: 1px; line-height: 1.2; }
+  .ctc-compact .ctc-event-desc { line-height: 1.25; }
+  .ctc-compact .ctc-week-banner { padding-top: 4px; padding-bottom: 4px; }
 
   /* Sezioni globali in fondo (Senza data, Completati) */
   .ctc-section {
@@ -1158,7 +1208,7 @@ class CalendarTasksCard extends HTMLElement {
     const timeFormat = this._config.time_format || "auto";
     const firstDayOfWeek = resolveFirstDayOfWeek(this._config.first_day_of_week, displayLocale);
 
-    const card = document.createElement("ha-card");
+    let card = document.createElement("ha-card");
 
     // Stato collapsed (persistente). Calcolato PRIMA dell'header perché serve
     // per decidere l'icona del pulsante e applicare la classe alla card.
@@ -1189,10 +1239,30 @@ class CalendarTasksCard extends HTMLElement {
         <span class="ctc-title">${this._config.show_title !== false ? titleText : ""}</span>
         ${headerActions ? `<span class="ctc-header-actions">${headerActions}</span>` : ""}
       </div>` : "";
+
+    // Imposto SOLO l'header su card.innerHTML.
+    // Poi creo un body separato come elemento DOM, che riempirò con il contenuto.
+    // Questo evita il problema dell'auto-closing dei div quando si usa innerHTML += più volte.
     card.innerHTML = headerHtml;
+
+    // Body wrapper: container scrollabile.
+    // Se max_events_visible > 0, il body diventa scrollabile e mostra solo i primi N giorni.
+    // L'altezza viene calcolata dopo il rendering (vedi più sotto, dopo l'appendChild).
+    const body = document.createElement("div");
+    body.className = "ctc-body";
+    // Applico la classe compact_mode al body se richiesto (riduce spazi)
+    if (this._config.compact_mode === true) {
+      body.classList.add("ctc-compact");
+    }
+    // Reference shuffle: cardElement = ha-card, card = body (per innerHTML += sotto)
+    const cardElement = card;
+    card = body;
+    this._cardElement = cardElement;
+
     if (this._loading) {
       card.innerHTML += `<div class="ctc-loading"><ha-circular-progress active size="small"></ha-circular-progress></div>`;
-      shadow.appendChild(card);
+      cardElement.appendChild(body);
+      shadow.appendChild(cardElement);
       return;
     }
     const today = new Date();
@@ -1480,7 +1550,45 @@ class CalendarTasksCard extends HTMLElement {
       const noEventsText = typeof noEventsFn === "function" ? noEventsFn(numDays) : noEventsFn;
       card.innerHTML += `<div class="ctc-empty">${noEventsText}</div>`;
     }
-    shadow.appendChild(card);
+    // Aggiungo il body (con tutto il contenuto accumulato) alla card vera (cardElement)
+    // e poi cardElement allo shadow DOM.
+    cardElement.appendChild(card);
+    shadow.appendChild(cardElement);
+
+    // Logica "Limita eventi visibili": dopo il rendering, se limit_events_visible è true
+    // e max_events_visible > 0, calcolo l'altezza dei primi N elementi giorno e applico
+    // max-height al body. Il browser mostrerà una scrollbar verticale per il contenuto in eccesso.
+    const limitEnabled = this._config.limit_events_visible === true;
+    const maxVisible = parseInt(this._config.max_events_visible);
+    if (limitEnabled && maxVisible && maxVisible > 0) {
+      // Uso setTimeout(50ms) invece di requestAnimationFrame perché in compact mode
+      // il browser deve applicare il CSS (padding ridotti, line-height nuovi) PRIMA
+      // di poter misurare correttamente l'altezza. Anche il doppio rAF non basta
+      // perché alcune proprietà (es. line-height) richiedono più frame per propagarsi.
+      // 50ms è impercettibile all'utente ma garantisce misure accurate.
+      setTimeout(() => {
+        // Cerco tutti gli elementi "giorno" (.ctc-day-row) nel body
+        const dayRows = card.querySelectorAll(".ctc-day-row");
+        if (dayRows.length > maxVisible) {
+          // Calcolo l'altezza dei primi N giorni
+          let totalHeight = 0;
+          for (let i = 0; i < maxVisible; i++) {
+            if (dayRows[i]) {
+              // getBoundingClientRect è più preciso di offsetHeight per misure subpixel
+              totalHeight += dayRows[i].getBoundingClientRect().height;
+            }
+          }
+          // NO buffer aggiuntivo: con getBoundingClientRect + Math.ceil l'altezza è
+          // già precisa al pixel. Aggiungere un buffer fa "sbordare" il primo
+          // elemento successivo, mostrandone un pezzetto sotto il limite.
+          if (totalHeight > 0) {
+            // Math.ceil per evitare tagli da arrotondamenti subpixel
+            card.style.maxHeight = Math.ceil(totalHeight) + "px";
+            card.style.overflowY = "auto";
+          }
+        }
+      }, 50);
+    }
 
     // Refresh button: ferma propagazione per non triggerare l'azione della card
     const refreshBtn = shadow.getElementById("ctc-refresh");
@@ -1532,8 +1640,11 @@ class CalendarTasksCard extends HTMLElement {
     };
     const hasCardAction = ["tap", "hold", "double_tap"].some(k => cardActions[k] && cardActions[k].action && cardActions[k].action !== "none");
     if (hasCardAction) {
-      card.classList.add("ctc-clickable");
-      const cleanup = attachActionListeners(card, () => cardActions, (kind) => {
+      // Le azioni vanno sulla ha-card vera, non sul body wrapper interno.
+      // Altrimenti cliccando sull'header non parte l'azione (l'header è fuori dal body).
+      const target = this._cardElement || card;
+      target.classList.add("ctc-clickable");
+      const cleanup = attachActionListeners(target, () => cardActions, (kind) => {
         handleHaAction(this, this._hass, cardActions[kind], null);
       });
       this._cleanupActions.push(cleanup);
@@ -2138,6 +2249,40 @@ class CalendarTasksCardEditor extends HTMLElement {
         v => { this._config.show_refresh = v; this._fire(); }));
       body.appendChild(this._makeToggle("Show collapse button", this._config.show_collapse_button !== false,
         v => { this._config.show_collapse_button = v; this._fire(); }));
+
+      // ── Limit events visible: toggle + numero condizionale ──
+      const limitEnabled = this._config.limit_events_visible === true;
+
+      // Creo PRIMA la riga del numero (perché il toggle deve poterla mostrare/nascondere)
+      const rowMaxEv = document.createElement("div");
+      rowMaxEv.className = "field-row";
+      rowMaxEv.style.display = limitEnabled ? "" : "none";
+      rowMaxEv.style.paddingLeft = "16px";  // indentazione visiva
+      const lblMaxEv = document.createElement("label");
+      lblMaxEv.textContent = "Max events visible";
+      const inpMaxEv = this._makeInput("inp-maxev", "number",
+        this._config.max_events_visible != null ? this._config.max_events_visible : 3, "narrow",
+        v => {
+          const n = parseInt(v);
+          this._config.max_events_visible = isNaN(n) || n < 1 ? 1 : n;
+          this._fire();
+        });
+      rowMaxEv.append(lblMaxEv, inpMaxEv);
+
+      // Poi creo il toggle, che ora può riferirsi a rowMaxEv
+      body.appendChild(this._makeToggle("Limit visible events (enable scrollbar)", limitEnabled,
+        v => {
+          this._config.limit_events_visible = v;
+          rowMaxEv.style.display = v ? "" : "none";
+          this._fire();
+        }));
+
+      // Aggiungo la riga del numero al body (sotto al toggle)
+      body.appendChild(rowMaxEv);
+
+      // Compact mode: riduce spazi verticali per card più compatta
+      body.appendChild(this._makeToggle("Compact mode (reduced spacing)", this._config.compact_mode === true,
+        v => { this._config.compact_mode = v; this._fire(); }));
 
       root.appendChild(wrapper);
     }

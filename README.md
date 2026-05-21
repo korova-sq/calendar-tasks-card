@@ -23,6 +23,8 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 📍 **Event location**: shows the location of calendar events with optional click-to-maps
 - 📆 **Week numbers**: ISO 8601 week separators (toggle on/off)
 - 🔽 **Collapsible**: hide everything with one click, state persists
+- 📋 **Max events visible**: optionally limit visible events with a smooth internal scrollbar
+- 📏 **Compact mode**: reduced spacing option for tighter layouts
 - 🔄 **Force refresh**: button to update all integrations on demand
 - 🌐 **Internationalization**: English and Italian, auto-detects from system
 - 🕐 **Time format**: 12h or 24h, follows system preferences
@@ -108,6 +110,9 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `days` | `7` | Days to look ahead |
 | `show_refresh` | `true` | Show 🔄 refresh button |
 | `show_collapse_button` | `true` | Show ▲ collapse button |
+| `limit_events_visible` | `false` | Enable scrollbar to limit visible events |
+| `max_events_visible` | `3` | Number of events visible when `limit_events_visible` is true |
+| `compact_mode` | `false` | Reduced vertical spacing for tighter layout |
 
 ### 🌐 Localization
 | Option | Default | Values |
