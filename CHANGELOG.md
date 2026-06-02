@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-XX-XX
+
+### Added
+
+- **Weather support**: a new weather section in the editor lets you display
+  weather information from any HA `weather.*` entity.
+- **Today's weather widget**: shows current condition, temperature, min/max
+  and humidity at the top of the card.
+- **Weather per day**: shows weather icon and temperature next to each day's
+  date in the agenda (uses HA forecast attribute, typically 5-7 days ahead).
+- Both options can be enabled independently — show only today's widget,
+  only per-day weather, or both.
+- Localized condition labels (Italian and English).
+
+### Configuration
+
+- `show_weather: true/false` — master toggle to enable weather (default: false)
+- `weather_entity: weather.home` — HA weather entity to use
+- `show_weather_today: true/false` — show top widget for today (default: true)
+- `show_weather_per_day: true/false` — show icon+temp per day (default: false)
+
+### Notes
+
+- Weather defaults to OFF, so the card behaves exactly as before unless you
+  enable it.
+- For days beyond the forecast range (typically 5-7 days), no weather is
+  shown (no placeholder, no error).
+- Weather updates automatically when the underlying weather entity changes
+  state (no manual refresh needed).
+
+[1.3.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.3.0
+
 ## [1.2.0] - 2026-XX-XX
 
 ### Added
