@@ -50,6 +50,16 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 ### 📋 Clean agenda view
 ![Agenda view](screenshots/05-agenda-view.jpeg)
 
+### ☀️ Weather support
+![Weather example](screenshots/weather-support.jpeg)
+
+Display weather information from any HA `weather.*` entity with two independent options:
+
+- **Today's weather widget** (top of card): shows current condition, temperature, min/max for the day, and humidity.
+- **Per-day weather** (next to each date): icon and temperature for the next 5-7 days. For days beyond the forecast range, a discrete cloud-off icon is shown as placeholder.
+
+Both options can be enabled independently — show only one, the other, or both. Enable them in the **Weather** section of the visual editor.
+
 ## 📦 Installation
 
 ### HACS (recommended)
