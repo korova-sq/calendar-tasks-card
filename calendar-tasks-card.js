@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.2.0
+ * calendar-tasks-card v1.3.0
  */
 
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -53,6 +53,10 @@ const DEFAULT_CONFIG = {
   limit_events_visible: false,    // se true, attiva la scrollbar e mostra solo max_events_visible giorni
   max_events_visible: 3,          // numero di giorni da mostrare quando limit_events_visible è true
   compact_mode: false,            // se true, riduce spazi verticali per card più compatta
+  show_weather: false,            // master toggle per le funzionalità meteo
+  weather_entity: "",             // entità weather di HA da usare (es. weather.home)
+  show_weather_today: true,       // mostra widget meteo dettagliato in alto (solo oggi)
+  show_weather_per_day: false,    // mostra meteo (icona + temp) sotto la data di ogni giorno
   entity_colors: {},
   tap_action: DEFAULT_ACTION,
   hold_action: DEFAULT_ACTION,
@@ -142,7 +146,7 @@ const STYLES = `
     padding: 10px 16px;
     align-items: center;
   }
-  .ctc-day-row + .ctc-day-row { border-top: 1px solid var(--ctc-border); }
+  .ctc-day-row + .ctc-day-row { border-top: 2px solid var(--ctc-border); }
 
   .ctc-date-col { display: flex; flex-direction: column; align-items: center; }
   .ctc-date-wd {
@@ -328,6 +332,9 @@ const STYLES = `
   /* Quando la card è collassata, anche il body wrapper si nasconde per evitare
      spazio vuoto sotto l'header */
   .ctc-collapsed .ctc-body { display: none !important; }
+  /* Anche il widget meteo "oggi" si nasconde quando la card è collassata,
+     così collassando si vede solo l'header (comportamento prevedibile) */
+  .ctc-collapsed .ctc-weather-today { display: none !important; }
 
   /* Container scrollabile per il contenuto della card. Quando max_events_visible è impostato,
      il body diventa scrollabile internamente mostrando solo i primi N eventi (calcolato
@@ -392,6 +399,72 @@ const STYLES = `
   /* Cursor pointer quando ci sono azioni configurate */
   .ctc-clickable { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .ctc-clickable:active { opacity: 0.7; transition: opacity 0.1s; }
+
+  /* ─── Widget meteo "oggi" (in alto, sopra la lista) ─── */
+  .ctc-weather-today {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--ctc-border);
+    background: var(--secondary-background-color, rgba(0,0,0,0.03));
+  }
+  .ctc-weather-today-icon {
+    --mdc-icon-size: 36px;
+    color: var(--ctc-text);
+    flex-shrink: 0;
+  }
+  .ctc-weather-today-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ctc-weather-today-temp {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ctc-text);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .ctc-weather-today-temp .ctc-wt-condition {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ctc-muted);
+  }
+  .ctc-weather-today-details {
+    font-size: 11px;
+    color: var(--ctc-muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── Meteo per giorno (sotto la data) ─── */
+  .ctc-weather-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ctc-muted);
+    white-space: nowrap;
+  }
+  .ctc-weather-day-icon {
+    --mdc-icon-size: 16px;
+    flex-shrink: 0;
+  }
+  /* Placeholder per giorni senza previsione meteo: trattino più discreto */
+  .ctc-weather-day-empty {
+    color: var(--ctc-hint);
+    opacity: 0.9;
+  }
+  /* Versione compatta: meteo per giorno più stretto */
+  .ctc-compact .ctc-weather-day { margin-top: 2px; font-size: 10px; }
+  .ctc-compact .ctc-weather-day-icon { --mdc-icon-size: 14px; }
+  .ctc-compact .ctc-weather-today { padding: 6px 16px; }
+  .ctc-compact .ctc-weather-today-icon { --mdc-icon-size: 30px; }
 
 `;
 
@@ -536,6 +609,97 @@ const EDITOR_STYLES = `
   .sub-title:first-child { margin-top: 0; }
 `;
 
+/* ─── Helper meteo ──────────────────────────────────────────────── */
+/* Mappa le condizioni standard di HA (vedi
+   https://www.home-assistant.io/integrations/weather/#condition-mapping)
+   alle icone Material Design Icons (mdi:...).
+   Le condizioni sono case-insensitive e con underscore. */
+const WEATHER_ICONS = {
+  "clear-night": "mdi:weather-night",
+  "cloudy": "mdi:weather-cloudy",
+  "exceptional": "mdi:alert-circle-outline",
+  "fog": "mdi:weather-fog",
+  "hail": "mdi:weather-hail",
+  "lightning": "mdi:weather-lightning",
+  "lightning-rainy": "mdi:weather-lightning-rainy",
+  "partlycloudy": "mdi:weather-partly-cloudy",
+  "pouring": "mdi:weather-pouring",
+  "rainy": "mdi:weather-rainy",
+  "snowy": "mdi:weather-snowy",
+  "snowy-rainy": "mdi:weather-snowy-rainy",
+  "sunny": "mdi:weather-sunny",
+  "windy": "mdi:weather-windy",
+  "windy-variant": "mdi:weather-windy-variant",
+};
+
+/* Restituisce l'icona mdi per una condizione meteo, fallback su "weather-cloudy" */
+function getWeatherIcon(condition) {
+  if (!condition) return "mdi:weather-cloudy";
+  return WEATHER_ICONS[String(condition).toLowerCase()] || "mdi:weather-cloudy";
+}
+
+/* Localizza la condizione meteo nella lingua scelta. Le entità weather di HA
+   espongono la condizione in inglese (sunny, cloudy, rainy, ecc.) e HA stesso
+   non sempre fornisce traduzioni accessibili dalla card. Mappa quelle più comuni. */
+const WEATHER_LABELS = {
+  it: {
+    "clear-night": "Sereno",
+    "cloudy": "Nuvoloso",
+    "exceptional": "Eccezionale",
+    "fog": "Nebbia",
+    "hail": "Grandine",
+    "lightning": "Temporale",
+    "lightning-rainy": "Temporale e pioggia",
+    "partlycloudy": "Parzialmente nuvoloso",
+    "pouring": "Pioggia intensa",
+    "rainy": "Pioggia",
+    "snowy": "Neve",
+    "snowy-rainy": "Neve e pioggia",
+    "sunny": "Soleggiato",
+    "windy": "Ventoso",
+    "windy-variant": "Ventoso",
+  },
+  en: {
+    "clear-night": "Clear",
+    "cloudy": "Cloudy",
+    "exceptional": "Exceptional",
+    "fog": "Fog",
+    "hail": "Hail",
+    "lightning": "Thunderstorm",
+    "lightning-rainy": "Thunderstorm and rain",
+    "partlycloudy": "Partly cloudy",
+    "pouring": "Heavy rain",
+    "rainy": "Rainy",
+    "snowy": "Snow",
+    "snowy-rainy": "Snow and rain",
+    "sunny": "Sunny",
+    "windy": "Windy",
+    "windy-variant": "Windy",
+  },
+};
+
+function getWeatherLabel(condition, lang) {
+  if (!condition) return "";
+  const dict = WEATHER_LABELS[lang] || WEATHER_LABELS.en;
+  return dict[String(condition).toLowerCase()] || condition;
+}
+
+/* Estrae la previsione meteo per uno specifico giorno da un array di forecast.
+   Da HA 2024.4 le previsioni NON sono più negli attributi dell'entità, vanno
+   recuperate via servizio weather.get_forecasts. Questa funzione opera sull'array
+   già recuperato. Confronta solo la data (no orario). Ritorna null se non trovata. */
+function getForecastForDay(forecastArray, targetDate) {
+  if (!Array.isArray(forecastArray) || forecastArray.length === 0) return null;
+  const targetKey = dayKey(targetDate);
+  for (const fc of forecastArray) {
+    if (!fc.datetime) continue;
+    const fcDate = new Date(fc.datetime);
+    if (isNaN(fcDate)) continue;
+    if (dayKey(fcDate) === targetKey) return fc;
+  }
+  return null;
+}
+
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
 /* Restituisce il nome breve del giorno della settimana per una data,
@@ -629,6 +793,10 @@ const I18N = {
     no_date: "Senza data",
     completed: "Completati",
     open_in_maps: "Apri in Mappe",
+    weather_today: "Oggi",
+    weather_min: "Min",
+    weather_max: "Max",
+    weather_humidity: "Umidità",
     week_short: "Sett.",
     collapse_all: "Comprimi tutto",
     expand_all: "Espandi tutto",
@@ -660,6 +828,10 @@ const I18N = {
     no_date: "No date",
     completed: "Completed",
     open_in_maps: "Open in Maps",
+    weather_today: "Today",
+    weather_min: "Min",
+    weather_max: "Max",
+    weather_humidity: "Humidity",
     week_short: "Wk",
     collapse_all: "Collapse all",
     expand_all: "Expand all",
@@ -1030,12 +1202,16 @@ class CalendarTasksCard extends HTMLElement {
     this._config = {};
     this._events = [];
     this._tasks = [];
+    this._weatherForecast = [];  // array di previsioni meteo (recuperato via weather.get_forecasts)
     this._loading = false;
     this._lastFetch = null;
   }
 
   setConfig(config) {
     if (!config) throw new Error("Configurazione mancante");
+    // Salva i valori precedenti che ci servono per decidere se refetchare il forecast
+    const prevWeatherEntity = this._config?.weather_entity;
+    const prevPerDay = this._config?.show_weather_per_day;
     this._config = {
       ...DEFAULT_CONFIG,
       calendars: [], todos: [],
@@ -1053,15 +1229,41 @@ class CalendarTasksCard extends HTMLElement {
     } else {
       this._config.todos = [];
     }
-    this._render();
+    // Se la config del meteo è cambiata in modo "rilevante" rispetto alla prec.
+    // (entità o show_weather_per_day), refetch del forecast: serve nuovamente
+    // dopo che l'utente attiva l'opzione "per day" senza ricaricare la card.
+    const weatherChanged = this._hass && (
+      (prevWeatherEntity !== this._config.weather_entity) ||
+      (prevPerDay !== this._config.show_weather_per_day && this._config.show_weather)
+    );
+    if (weatherChanged) {
+      this._fetchWeatherForecast().then(fc => {
+        this._weatherForecast = fc;
+        this._render();
+      });
+    } else {
+      this._render();
+    }
   }
 
   set hass(hass) {
     const wasNull = !this._hass;
+    const oldWeather = this._hass && this._config.weather_entity
+      ? this._hass.states[this._config.weather_entity]
+      : null;
     this._hass = hass;
     const now = Date.now();
     const interval = (this._config.refresh_interval || 300) * 1000;
-    if (wasNull || !this._lastFetch || (now - this._lastFetch) > interval) this._fetchAll();
+    if (wasNull || !this._lastFetch || (now - this._lastFetch) > interval) {
+      this._fetchAll();
+    } else if (this._config.show_weather && this._config.weather_entity) {
+      // Re-render se è cambiato lo stato dell'entità weather (es. nuova previsione)
+      // Non serve fare un fetch completo, basta riaggiornare la UI con i dati freschi.
+      const newWeather = hass.states[this._config.weather_entity];
+      if (oldWeather && newWeather && oldWeather.state !== newWeather.state) {
+        this._render();
+      }
+    }
   }
 
   async _fetchAll(force = false) {
@@ -1105,9 +1307,14 @@ class CalendarTasksCard extends HTMLElement {
     const start = new Date();
     const end = new Date();
     end.setDate(end.getDate() + (this._config.days || 7));
-    const [events, tasks] = await Promise.all([this._fetchCalendarEvents(start, end), this._fetchTodoItems()]);
+    const [events, tasks, weatherForecast] = await Promise.all([
+      this._fetchCalendarEvents(start, end),
+      this._fetchTodoItems(),
+      this._fetchWeatherForecast(),
+    ]);
     this._events = events;
     this._tasks = tasks;
+    this._weatherForecast = weatherForecast;
     this._loading = false;
     this._lastFetch = Date.now();
     this._render();
@@ -1142,6 +1349,35 @@ class CalendarTasksCard extends HTMLElement {
       } catch (e) { console.warn(`[ctc] Errore todo ${id}:`, e); }
     }
     return results;
+  }
+
+  /* Recupera la previsione meteo daily dall'entità weather configurata.
+     Da HA 2024.4, l'attributo `forecast` è stato rimosso. Bisogna chiamare il
+     servizio weather.get_forecasts con `type: daily` e `return_response: true`.
+     Restituisce un array di oggetti previsione (datetime, condition, temperature,
+     templow, ecc.) oppure array vuoto se non disponibile/non configurato. */
+  async _fetchWeatherForecast() {
+    if (!this._hass) return [];
+    if (!this._config.show_weather) return [];
+    const entityId = this._config.weather_entity;
+    if (!entityId || !isValidEntityId(entityId)) return [];
+    // Solo se mostriamo il meteo per ogni giorno serve davvero il forecast.
+    // Se mostriamo solo il widget "oggi", basta lo state corrente dell'entità.
+    if (!this._config.show_weather_per_day) return [];
+    try {
+      const resp = await this._hass.connection.sendMessagePromise({
+        type: "call_service",
+        domain: "weather",
+        service: "get_forecasts",
+        service_data: { type: "daily" },
+        target: { entity_id: entityId },
+        return_response: true,
+      });
+      return resp?.response?.[entityId]?.forecast || [];
+    } catch (e) {
+      console.warn(`[ctc] Errore fetch weather forecast ${entityId}:`, e);
+      return [];
+    }
   }
 
   /* Cambia lo stato di un task (needs_action <-> completed) tramite il servizio
@@ -1354,6 +1590,61 @@ class CalendarTasksCard extends HTMLElement {
     let hasContent = false;
     let lastWeekShown = null; // per inserire il banner numero settimana ai cambi
 
+    // ── Widget meteo "oggi" in alto (se attivato) ──
+    // Recupera l'entità weather configurata e ne legge stato corrente.
+    // Mostra: icona meteo, temperatura attuale, condizione (testo localizzato),
+    // min/max della giornata e umidità (se disponibili negli attributi).
+    const weatherEntity = (this._config.show_weather && this._config.weather_entity && this._hass)
+      ? this._hass.states[this._config.weather_entity]
+      : null;
+    if (this._config.show_weather && this._config.show_weather_today && weatherEntity) {
+      const condition = weatherEntity.state; // es. "sunny", "cloudy"
+      const icon = getWeatherIcon(condition);
+      const label = getWeatherLabel(condition, lang);
+      const attrs = weatherEntity.attributes || {};
+      const temp = attrs.temperature;
+      const unit = attrs.temperature_unit || "°";
+      const humidity = attrs.humidity;
+      // Cerca min/max nella forecast del giorno corrente
+      const todayFc = getForecastForDay(this._weatherForecast, today);
+      const tMin = todayFc?.templow != null ? todayFc.templow : null;
+      const tMax = todayFc?.temperature != null ? todayFc.temperature : null;
+      // Costruisce dettagli: "Min 15° · Max 25° · Umidità 60%"
+      const details = [];
+      if (tMin != null) details.push(`${t("weather_min", lang)} ${Math.round(tMin)}${unit}`);
+      if (tMax != null) details.push(`${t("weather_max", lang)} ${Math.round(tMax)}${unit}`);
+      if (humidity != null) details.push(`${t("weather_humidity", lang)} ${Math.round(humidity)}%`);
+      const detailsHtml = details.length > 0 ? `<div class="ctc-weather-today-details">${details.join(" · ")}</div>` : "";
+      const tempStr = temp != null ? `${Math.round(temp)}${unit}` : "";
+      const todayLabel = t("weather_today", lang);
+      // IMPORTANTE: il widget meteo "oggi" va FUORI dal body scrollabile, dentro
+      // la cardElement (ha-card), così rimane sempre visibile sopra la lista
+      // anche quando la scrollbar è attiva. Lo creiamo come elemento DOM e
+      // lo inseriamo subito dopo l'header (e prima del body).
+      const weatherWidget = document.createElement("div");
+      weatherWidget.className = "ctc-weather-today";
+      // Quando compact_mode è attivo, aggiungo la classe sul widget per stile compatto
+      if (this._config.compact_mode === true) {
+        weatherWidget.classList.add("ctc-compact-widget");
+      }
+      weatherWidget.innerHTML = `
+        <ha-icon class="ctc-weather-today-icon" icon="${icon}"></ha-icon>
+        <div class="ctc-weather-today-main">
+          <div class="ctc-weather-today-temp">
+            ${tempStr ? `<span>${tempStr}</span>` : ""}
+            <span class="ctc-wt-condition">${todayLabel} ${label.toLowerCase()}</span>
+          </div>
+          ${detailsHtml}
+        </div>`;
+      // Inserisco prima del body (che è "card" in questo punto): il body è già
+      // stato creato e assegnato a "card", e cardElement è la ha-card vera.
+      // Strategia: appendere il widget a cardElement PRIMA che il body venga
+      // appeso. Ma in questo flusso il body è già appeso? No: viene appeso
+      // alla fine (cardElement.appendChild(card)). Quindi qui appendiamo
+      // il widget a cardElement, e DOPO viene aggiunto il body.
+      this._cardElement.appendChild(weatherWidget);
+    }
+
     // ── Ciclo per giorno: eventi + task ATTIVI con data ──
     for (let i = 0; i < numDays; i++) {
       const date = new Date();
@@ -1441,12 +1732,46 @@ class CalendarTasksCard extends HTMLElement {
       }).join("");
 
       const emptyHtml = totalItems === 0 ? `<div class="ctc-empty-day">${t("no_events_day", lang)}</div>` : "";
+
+      // Meteo per il giorno (se attivato e c'è una previsione disponibile per quel giorno)
+      // Le previsioni HA sono limitate (di solito 5-7 giorni). Per i giorni oltre,
+      // semplicemente non mostriamo niente (la riga meteo non appare).
+      let weatherDayHtml = "";
+      if (this._config.show_weather && this._config.show_weather_per_day && weatherEntity) {
+        // Per oggi, uso lo stato corrente (state + temperature attribute)
+        // Per i giorni futuri, cerco nella forecast
+        let condition = null;
+        let temp = null;
+        let unit = weatherEntity.attributes?.temperature_unit || "°";
+        if (isToday) {
+          condition = weatherEntity.state;
+          temp = weatherEntity.attributes?.temperature;
+        } else {
+          const fc = getForecastForDay(this._weatherForecast, date);
+          if (fc) {
+            condition = fc.condition;
+            temp = fc.temperature;
+          }
+        }
+        if (condition) {
+          const icon = getWeatherIcon(condition);
+          const tempStr = temp != null ? `${Math.round(temp)}${unit}` : "";
+          weatherDayHtml = `<div class="ctc-weather-day"><ha-icon class="ctc-weather-day-icon" icon="${icon}"></ha-icon>${tempStr ? `<span>${tempStr}</span>` : ""}</div>`;
+        } else {
+          // Nessuna previsione disponibile per questo giorno (oltre il range forecast).
+          // Mostriamo un'icona "cloud-off" discreta invece di niente, così l'utente
+          // capisce che il meteo è attivo ma non c'è dato per quel giorno specifico.
+          weatherDayHtml = `<div class="ctc-weather-day ctc-weather-day-empty"><ha-icon class="ctc-weather-day-icon" icon="mdi:cloud-off-outline"></ha-icon></div>`;
+        }
+      }
+
       card.innerHTML += `
         <div class="ctc-day-row">
           <div class="ctc-date-col">
             <div class="ctc-date-wd">${wdName}</div>
             <div class="ctc-date-num ${isToday ? "today" : ""}">${date.getDate()}</div>
             <div class="ctc-date-month">${monthName}</div>
+            ${weatherDayHtml}
           </div>
           <div class="ctc-events-col">
             ${eventsHtml}${tasksHtml}${emptyHtml}
@@ -2342,6 +2667,98 @@ class CalendarTasksCardEditor extends HTMLElement {
         v => { this._config.show_location = v; this._fire(); }));
       body.appendChild(this._makeToggle("Make location clickable (opens maps)", !!this._config.location_clickable,
         v => { this._config.location_clickable = v; this._fire(); }));
+
+      root.appendChild(wrapper);
+    }
+
+    // ── Weather ──
+    {
+      const { wrapper, body } = this._makeCollapsible("weather", "Weather", false, "mdi:weather-partly-cloudy");
+
+      // Master toggle: attiva/disattiva l'intera funzionalità meteo
+      const showWeather = this._config.show_weather === true;
+
+      // Container per i campi che appaiono solo se il toggle master è ON
+      const subFields = document.createElement("div");
+      subFields.style.display = showWeather ? "" : "none";
+      subFields.style.paddingLeft = "16px";
+
+      // Campo: weather entity (con autocompletamento delle entità weather.*)
+      // Uso lo stesso pattern dei calendari/todo: input testuale con dropdown
+      const rowEntity = document.createElement("div");
+      rowEntity.className = "field-row";
+      const lblEntity = document.createElement("label");
+      lblEntity.textContent = "Weather entity";
+
+      const entityWrap = document.createElement("div");
+      entityWrap.style.position = "relative";
+      entityWrap.style.flex = "1";
+      entityWrap.style.maxWidth = "200px";
+
+      const inpEntity = document.createElement("input");
+      inpEntity.type = "text";
+      inpEntity.className = "ctc-native-input";
+      inpEntity.style.width = "100%";
+      inpEntity.value = this._config.weather_entity || "";
+      inpEntity.placeholder = "weather.home";
+      blockHAShortcuts(inpEntity);
+
+      const dropdownEntity = document.createElement("div");
+      dropdownEntity.className = "autocomplete";
+      dropdownEntity.style.display = "none";
+
+      const renderDropdownWeather = (filter) => {
+        const entities = this._getEntities("weather");
+        const filtered = entities.filter(e =>
+          e.id.includes(filter.toLowerCase()) || e.name.toLowerCase().includes(filter.toLowerCase())
+        ).slice(0, 8);
+        if (!filtered.length) { dropdownEntity.style.display = "none"; return; }
+        dropdownEntity.innerHTML = "";
+        filtered.forEach(({ id, name }) => {
+          const item = document.createElement("div");
+          item.className = "ac-item";
+          item.innerHTML = `<div class="ac-name">${name}</div><div class="ac-id">${id}</div>`;
+          item.addEventListener("mousedown", e => {
+            e.preventDefault();
+            inpEntity.value = id;
+            dropdownEntity.style.display = "none";
+            this._config.weather_entity = id;
+            this._fire();
+          });
+          dropdownEntity.appendChild(item);
+        });
+        dropdownEntity.style.display = "block";
+      };
+      inpEntity.addEventListener("focus", () => renderDropdownWeather(inpEntity.value));
+      inpEntity.addEventListener("input", () => renderDropdownWeather(inpEntity.value));
+      inpEntity.addEventListener("blur", () => {
+        setTimeout(() => { dropdownEntity.style.display = "none"; }, 200);
+        this._config.weather_entity = inpEntity.value;
+        this._fire();
+      });
+      entityWrap.append(inpEntity, dropdownEntity);
+      rowEntity.append(lblEntity, entityWrap);
+      subFields.appendChild(rowEntity);
+
+      // Toggle: mostra meteo "oggi" in alto
+      subFields.appendChild(this._makeToggle("Show today's weather (top widget)",
+        this._config.show_weather_today !== false,
+        v => { this._config.show_weather_today = v; this._fire(); }));
+
+      // Toggle: mostra meteo per ogni giorno (sotto la data)
+      subFields.appendChild(this._makeToggle("Show weather per day (next to date)",
+        this._config.show_weather_per_day === true,
+        v => { this._config.show_weather_per_day = v; this._fire(); }));
+
+      // Master toggle (in cima alla sezione)
+      body.appendChild(this._makeToggle("Show weather", showWeather,
+        v => {
+          this._config.show_weather = v;
+          subFields.style.display = v ? "" : "none";
+          this._fire();
+        }));
+
+      body.appendChild(subFields);
 
       root.appendChild(wrapper);
     }
