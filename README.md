@@ -25,6 +25,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 🔽 **Collapsible**: hide everything with one click, state persists
 - 📋 **Max events visible**: optionally limit visible events with a smooth internal scrollbar
 - 📏 **Compact mode**: reduced spacing option for tighter layouts
+- ☀️ **Weather support**: optional today's weather widget and per-day forecast
 - 🔄 **Force refresh**: button to update all integrations on demand
 - 🌐 **Internationalization**: English and Italian, auto-detects from system
 - 🕐 **Time format**: 12h or 24h, follows system preferences
@@ -113,6 +114,10 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `limit_events_visible` | `false` | Enable scrollbar to limit visible events |
 | `max_events_visible` | `3` | Number of events visible when `limit_events_visible` is true |
 | `compact_mode` | `false` | Reduced vertical spacing for tighter layout |
+| `show_weather` | `false` | Master toggle to enable weather features |
+| `weather_entity` | `""` | HA weather entity to use (e.g. `weather.home`) |
+| `show_weather_today` | `true` | Show today's weather widget at the top of the card |
+| `show_weather_per_day` | `false` | Show weather icon+temp next to each day's date |
 
 ### 🌐 Localization
 | Option | Default | Values |
