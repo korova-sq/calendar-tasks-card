@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.3.0
+ * calendar-tasks-card v1.4.0
  */
 
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -57,6 +57,7 @@ const DEFAULT_CONFIG = {
   weather_entity: "",             // entità weather di HA da usare (es. weather.home)
   show_weather_today: true,       // mostra widget meteo dettagliato in alto (solo oggi)
   show_weather_per_day: false,    // mostra meteo (icona + temp) sotto la data di ogni giorno
+  exclude: [],                    // lista di keyword: gli eventi/task con titolo che le contiene vengono nascosti
   entity_colors: {},
   tap_action: DEFAULT_ACTION,
   hold_action: DEFAULT_ACTION,
@@ -700,6 +701,26 @@ function getForecastForDay(forecastArray, targetDate) {
   return null;
 }
 
+/* ─── Helper filtro exclude ─────────────────────────────────────── */
+/* Controlla se un titolo contiene una delle keyword di exclude.
+   Match parziale (sub-string) e case-insensitive: "lavoro" matcha "Riunione di lavoro".
+   Accetta sia stringhe che array; ritorna true se il titolo va NASCOSTO.
+   Le keyword vuote vengono ignorate (per non nascondere accidentalmente tutto). */
+function isExcluded(title, excludeList) {
+  if (!title || !excludeList) return false;
+  // Normalizza in array
+  const list = Array.isArray(excludeList) ? excludeList : [excludeList];
+  if (list.length === 0) return false;
+  const titleLower = String(title).toLowerCase();
+  for (const kw of list) {
+    if (kw == null) continue;
+    const kwClean = String(kw).toLowerCase().trim();
+    if (kwClean.length === 0) continue;  // ignora keyword vuote
+    if (titleLower.includes(kwClean)) return true;
+  }
+  return false;
+}
+
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
 /* Restituisce il nome breve del giorno della settimana per una data,
@@ -797,6 +818,10 @@ const I18N = {
     weather_min: "Min",
     weather_max: "Max",
     weather_humidity: "Umidità",
+    exclude_keywords: "Parole chiave da escludere",
+    exclude_placeholder: "es. Compleanno, Riunione",
+    exclude_add: "Aggiungi",
+    exclude_help: "Eventi e task con titolo contenente queste parole verranno nascosti (match parziale, case-insensitive)",
     week_short: "Sett.",
     collapse_all: "Comprimi tutto",
     expand_all: "Espandi tutto",
@@ -832,6 +857,10 @@ const I18N = {
     weather_min: "Min",
     weather_max: "Max",
     weather_humidity: "Humidity",
+    exclude_keywords: "Exclude keywords",
+    exclude_placeholder: "e.g. Birthday, Meeting",
+    exclude_add: "Add",
+    exclude_help: "Events and tasks with titles containing these keywords will be hidden (partial match, case-insensitive)",
     week_short: "Wk",
     collapse_all: "Collapse all",
     expand_all: "Expand all",
@@ -1236,6 +1265,10 @@ class CalendarTasksCard extends HTMLElement {
       (prevWeatherEntity !== this._config.weather_entity) ||
       (prevPerDay !== this._config.show_weather_per_day && this._config.show_weather)
     );
+    // Riapplica i filtri ai dati grezzi (necessario quando cambia `exclude`
+    // dall'editor: senza questo, gli eventi/task filtrati restano gli stessi
+    // perché _events/_tasks vengono popolati solo da _fetchAll).
+    this._applyFilters();
     if (weatherChanged) {
       this._fetchWeatherForecast().then(fc => {
         this._weatherForecast = fc;
@@ -1312,9 +1345,14 @@ class CalendarTasksCard extends HTMLElement {
       this._fetchTodoItems(),
       this._fetchWeatherForecast(),
     ]);
-    this._events = events;
-    this._tasks = tasks;
+    // Memorizza i dati GREZZI (senza filtri) in _eventsRaw/_tasksRaw.
+    // I dati filtrati vengono ricalcolati ad ogni render (e ad ogni cambio di
+    // configurazione) tramite _applyFilters, così che modifiche al filtro
+    // exclude si riflettano subito senza serve un refetch.
+    this._eventsRaw = events;
+    this._tasksRaw = tasks;
     this._weatherForecast = weatherForecast;
+    this._applyFilters();
     this._loading = false;
     this._lastFetch = Date.now();
     this._render();
@@ -1349,6 +1387,25 @@ class CalendarTasksCard extends HTMLElement {
       } catch (e) { console.warn(`[ctc] Errore todo ${id}:`, e); }
     }
     return results;
+  }
+
+  /* Applica i filtri configurati ai dati grezzi e popola _events/_tasks.
+     Filtro `exclude`: nasconde eventi/task con titolo che contiene una delle keyword.
+     Match case-insensitive e parziale (sub-string). Una keyword vuota viene
+     ignorata per sicurezza (non vogliamo nascondere tutto). */
+  _applyFilters() {
+    const rawEvents = this._eventsRaw || [];
+    const rawTasks = this._tasksRaw || [];
+    const ex = this._config?.exclude;
+    // Normalizza: accetta array, stringa singola, o undefined
+    const list = Array.isArray(ex) ? ex : (typeof ex === "string" && ex.trim() ? [ex] : []);
+    if (list.length === 0) {
+      this._events = rawEvents;
+      this._tasks = rawTasks;
+      return;
+    }
+    this._events = rawEvents.filter(ev => !isExcluded(ev.summary || ev.title, list));
+    this._tasks = rawTasks.filter(task => !isExcluded(task.summary || task.title, list));
   }
 
   /* Recupera la previsione meteo daily dall'entità weather configurata.
@@ -2081,6 +2138,19 @@ class CalendarTasksCardEditor extends HTMLElement {
       }
     }
 
+    // exclude: lista di keyword. Default è array vuoto [], che NON è uno scalar
+    // (e quindi non viene gestito dal loop sopra). La includiamo solo se contiene
+    // almeno una keyword valida, così non finisce mai nel YAML salvato se vuota.
+    if (Array.isArray(config.exclude)) {
+      const cleaned = config.exclude.filter(kw => kw != null && String(kw).trim().length > 0);
+      if (cleaned.length > 0) {
+        result.exclude = cleaned;
+      }
+    } else if (typeof config.exclude === "string" && config.exclude.trim().length > 0) {
+      // Supporto anche stringa singola (per chi configura da YAML)
+      result.exclude = [config.exclude.trim()];
+    }
+
     return result;
   }
 
@@ -2487,6 +2557,10 @@ class CalendarTasksCardEditor extends HTMLElement {
     style.textContent = EDITOR_STYLES;
     shadow.appendChild(style);
 
+    // Risolvi la lingua per i testi dell'editor (es. label, placeholder, help)
+    const hassLanguage = this._hass?.locale?.language || this._hass?.language || null;
+    const lang = resolveLanguage(this._config?.language, hassLanguage);
+
     const root = document.createElement("div");
     root.className = "editor";
 
@@ -2801,6 +2875,142 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       body.appendChild(this._makeToggle("Allow completing tasks", this._config.allow_complete !== false,
         v => { this._config.allow_complete = v; this._fire(); }));
+
+      root.appendChild(wrapper);
+    }
+
+    // ── Filters ──
+    {
+      const { wrapper, body } = this._makeCollapsible("filters", "Filters", false, "mdi:filter-variant");
+
+      // Stato locale: array di keyword corrente
+      const getExcludeList = () => {
+        const ex = this._config.exclude;
+        if (Array.isArray(ex)) return [...ex];
+        if (typeof ex === "string" && ex.trim().length > 0) return [ex];
+        return [];
+      };
+
+      // Container per i chip delle keyword esistenti
+      const chipsContainer = document.createElement("div");
+      chipsContainer.style.display = "flex";
+      chipsContainer.style.flexWrap = "wrap";
+      chipsContainer.style.gap = "6px";
+      chipsContainer.style.marginBottom = "8px";
+      chipsContainer.style.minHeight = "24px";
+
+      // Funzione di rendering dei chip
+      const renderChips = () => {
+        chipsContainer.innerHTML = "";
+        const list = getExcludeList();
+        list.forEach((kw, idx) => {
+          const chip = document.createElement("span");
+          chip.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--secondary-background-color, rgba(0,0,0,0.05));
+            border-radius: 16px;
+            font-size: 13px;
+            color: var(--ctc-text);
+          `;
+          chip.textContent = kw;
+          // Pulsante "x" per rimuovere
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.textContent = "×";
+          removeBtn.style.cssText = `
+            border: none;
+            background: transparent;
+            color: var(--ctc-muted);
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0;
+            margin: 0;
+            font-weight: bold;
+          `;
+          removeBtn.addEventListener("click", () => {
+            const newList = getExcludeList();
+            newList.splice(idx, 1);
+            this._config.exclude = newList;
+            renderChips();
+            this._fire();
+          });
+          chip.appendChild(removeBtn);
+          chipsContainer.appendChild(chip);
+        });
+      };
+
+      // Riga input + bottone Aggiungi
+      const inputRow = document.createElement("div");
+      inputRow.style.display = "flex";
+      inputRow.style.gap = "8px";
+      inputRow.style.alignItems = "center";
+
+      const inpKw = document.createElement("input");
+      inpKw.type = "text";
+      inpKw.className = "ctc-native-input";
+      inpKw.style.flex = "1";
+      inpKw.placeholder = t("exclude_placeholder", lang);
+      blockHAShortcuts(inpKw);
+
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.textContent = t("exclude_add", lang);
+      addBtn.style.cssText = `
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--ctc-border);
+        background: var(--secondary-background-color, transparent);
+        color: var(--ctc-text);
+        cursor: pointer;
+        font-size: 13px;
+      `;
+
+      const addKeyword = () => {
+        const value = inpKw.value.trim();
+        if (!value) return;
+        const list = getExcludeList();
+        // Evita duplicati (case-insensitive)
+        if (list.some(kw => String(kw).toLowerCase() === value.toLowerCase())) {
+          inpKw.value = "";
+          return;
+        }
+        list.push(value);
+        this._config.exclude = list;
+        inpKw.value = "";
+        renderChips();
+        this._fire();
+      };
+
+      addBtn.addEventListener("click", addKeyword);
+      inpKw.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          addKeyword();
+        }
+      });
+
+      inputRow.append(inpKw, addBtn);
+
+      // Etichetta + help text
+      const labelDiv = document.createElement("div");
+      labelDiv.style.cssText = "font-size: 13px; color: var(--ctc-text); margin-bottom: 8px;";
+      labelDiv.textContent = t("exclude_keywords", lang);
+
+      const helpDiv = document.createElement("div");
+      helpDiv.style.cssText = "font-size: 11px; color: var(--ctc-muted); margin-top: 8px; line-height: 1.4;";
+      helpDiv.textContent = t("exclude_help", lang);
+
+      body.appendChild(labelDiv);
+      body.appendChild(chipsContainer);
+      body.appendChild(inputRow);
+      body.appendChild(helpDiv);
+
+      // Rendering iniziale
+      renderChips();
 
       root.appendChild(wrapper);
     }
