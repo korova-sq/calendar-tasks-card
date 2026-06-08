@@ -26,6 +26,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 📋 **Max events visible**: optionally limit visible events with a smooth internal scrollbar
 - 📏 **Compact mode**: reduced spacing option for tighter layouts
 - ☀️ **Weather support**: optional today's weather widget and per-day forecast
+- 🔍 **Exclude filter**: hide events and tasks with specific keywords in their titles
 - 🔄 **Force refresh**: button to update all integrations on demand
 - 🌐 **Internationalization**: English and Italian, auto-detects from system
 - 🕐 **Time format**: 12h or 24h, follows system preferences
@@ -51,7 +52,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 ![Agenda view](screenshots/05-agenda-view.jpeg)
 
 ### ☀️ Weather support
-![Weather example](screenshots/06-weather-support.jpeg)
+![Weather example](screenshots/weather-support.jpeg)
 
 Display weather information from any HA `weather.*` entity with two independent options:
 
@@ -128,6 +129,7 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `weather_entity` | `""` | HA weather entity to use (e.g. `weather.home`) |
 | `show_weather_today` | `true` | Show today's weather widget at the top of the card |
 | `show_weather_per_day` | `false` | Show weather icon+temp next to each day's date |
+| `exclude` | `[]` | List of keywords; events and tasks with titles containing any keyword will be hidden (partial match, case-insensitive) |
 
 ### 🌐 Localization
 | Option | Default | Values |
