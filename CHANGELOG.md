@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-XX-XX
+
+### Added
+
+- **Exclude filter**: a new `exclude` configuration option lets you hide
+  events and tasks whose titles contain specific keywords.
+- **Editor UI**: a new "Filters" section in the visual editor with chip-style
+  keyword management (add/remove keywords visually).
+- Match is partial (sub-string) and case-insensitive, so `exclude: ["meeting"]`
+  hides "Weekly meeting", "Meeting room", "meeting notes", etc.
+- Applies to both calendar events and todo tasks.
+
+### Configuration
+
+- `exclude: []` — list of keywords to filter (default: empty, no filtering)
+- Example: `exclude: ["Birthday", "Meeting"]` hides any event or task with
+  "Birthday" or "Meeting" in the title.
+
+### Notes
+
+- Filter defaults to empty, so existing setups behave exactly as before.
+- Match is case-insensitive: `["meeting"]` is the same as `["Meeting"]`.
+- Empty keywords are ignored to prevent accidentally hiding everything.
+
+### Credits
+
+- Feature requested and prototyped by [@lelouch9999](https://github.com/lelouch9999)
+  in issue [#1](https://github.com/korova-sq/calendar-tasks-card/issues/1).
+  Thanks for the great suggestion and the working prototype!
+
+[1.4.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.4.0
+
 ## [1.3.0] - 2026-XX-XX
 
 ### Added
