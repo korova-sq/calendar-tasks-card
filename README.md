@@ -52,7 +52,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 ![Agenda view](screenshots/05-agenda-view.jpeg)
 
 ### ☀️ Weather support
-![Weather example](screenshots/weather-support.jpeg)
+![Weather example](screenshots/06-weather-support.jpeg)
 
 Display weather information from any HA `weather.*` entity with two independent options:
 
