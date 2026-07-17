@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.4.0
+ * calendar-tasks-card v1.5.0
  */
 
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.5.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -822,6 +822,48 @@ const I18N = {
     exclude_placeholder: "es. Compleanno, Riunione",
     exclude_add: "Aggiungi",
     exclude_help: "Eventi e task con titolo contenente queste parole verranno nascosti (match parziale, case-insensitive)",
+    // ─── Editor UI ───
+    ed_entities: "Entità",
+    ed_calendars: "Calendari",
+    ed_todo_lists: "Liste todo",
+    ed_general: "Generale",
+    ed_localization: "Localizzazione",
+    ed_display: "Visualizzazione",
+    ed_weather: "Meteo",
+    ed_tasks: "Task",
+    ed_filters: "Filtri",
+    ed_interactions: "Interazioni",
+    ed_title: "Titolo",
+    ed_days_to_show: "Giorni da mostrare",
+    ed_max_events_visible: "Numero massimo eventi visibili",
+    ed_show_title: "Mostra titolo",
+    ed_show_refresh: "Mostra pulsante refresh",
+    ed_show_collapse: "Mostra pulsante collassa",
+    ed_limit_events: "Limita eventi visibili (attiva scrollbar)",
+    ed_compact_mode: "Modalità compatta (spazi ridotti)",
+    ed_show_week_number: "Mostra numero settimana",
+    ed_show_end_time: "Mostra orario di fine",
+    ed_show_empty_days: "Mostra giorni vuoti",
+    ed_show_relative_time: "Mostra tempo relativo (tra X giorni)",
+    ed_show_source: "Mostra origine (calendario/lista)",
+    ed_show_description: "Mostra descrizione",
+    ed_show_location: "Mostra location (eventi calendario)",
+    ed_location_clickable: "Rendi location cliccabile (apre mappe)",
+    ed_weather_entity: "Entità meteo",
+    ed_show_weather: "Mostra meteo",
+    ed_show_weather_today: "Mostra meteo di oggi (widget in alto)",
+    ed_show_weather_per_day: "Mostra meteo per giorno (accanto alla data)",
+    ed_show_overdue: "Mostra task scaduti",
+    ed_overdue_days: "Giorni scaduti da mostrare (0 = tutti)",
+    ed_show_completed: "Mostra task completati",
+    ed_allow_complete: "Consenti completamento task",
+    ed_action: "Azione",
+    ed_data_json: "Dati (JSON)",
+    ed_choose_color: "Scegli colore",
+    ed_automatic: "Automatico",
+    ed_tap: "Tap",
+    ed_hold: "Pressione lunga",
+    ed_double_tap: "Doppio tap",
     week_short: "Sett.",
     collapse_all: "Comprimi tutto",
     expand_all: "Espandi tutto",
@@ -861,6 +903,48 @@ const I18N = {
     exclude_placeholder: "e.g. Birthday, Meeting",
     exclude_add: "Add",
     exclude_help: "Events and tasks with titles containing these keywords will be hidden (partial match, case-insensitive)",
+    // ─── Editor UI ───
+    ed_entities: "Entities",
+    ed_calendars: "Calendars",
+    ed_todo_lists: "Todo lists",
+    ed_general: "General",
+    ed_localization: "Localization",
+    ed_display: "Display",
+    ed_weather: "Weather",
+    ed_tasks: "Tasks",
+    ed_filters: "Filters",
+    ed_interactions: "Interactions",
+    ed_title: "Title",
+    ed_days_to_show: "Days to show",
+    ed_max_events_visible: "Max events visible",
+    ed_show_title: "Show title",
+    ed_show_refresh: "Show refresh button",
+    ed_show_collapse: "Show collapse button",
+    ed_limit_events: "Limit visible events (enable scrollbar)",
+    ed_compact_mode: "Compact mode (reduced spacing)",
+    ed_show_week_number: "Show week number",
+    ed_show_end_time: "Show end time",
+    ed_show_empty_days: "Show empty days",
+    ed_show_relative_time: "Show relative time (in X days)",
+    ed_show_source: "Show source (calendar/list)",
+    ed_show_description: "Show description",
+    ed_show_location: "Show location (calendar events)",
+    ed_location_clickable: "Make location clickable (opens maps)",
+    ed_weather_entity: "Weather entity",
+    ed_show_weather: "Show weather",
+    ed_show_weather_today: "Show today's weather (top widget)",
+    ed_show_weather_per_day: "Show weather per day (next to date)",
+    ed_show_overdue: "Show overdue tasks",
+    ed_overdue_days: "Overdue days to show (0 = all)",
+    ed_show_completed: "Show completed tasks",
+    ed_allow_complete: "Allow completing tasks",
+    ed_action: "Action",
+    ed_data_json: "Data (JSON)",
+    ed_choose_color: "Choose color",
+    ed_automatic: "Automatic",
+    ed_tap: "Tap",
+    ed_hold: "Hold",
+    ed_double_tap: "Double tap",
     week_short: "Wk",
     collapse_all: "Collapse all",
     expand_all: "Expand all",
@@ -882,20 +966,27 @@ const I18N = {
   },
 };
 
-/* Risolve la lingua effettiva da usare. Se config = "auto", prova prima il
-   locale di HA (passato come hassLanguage), poi il navigator.language, poi
-   fallback su "en". Se la lingua scelta non è supportata, usa "en". */
+/* Risolve la lingua effettiva da usare.
+   - Se `configLang` è esplicito (non "auto"): usa quella se supportata, altrimenti "en".
+   - Se `configLang` è "auto" (o vuoto):
+     - Se HA ha una lingua impostata (`hassLanguage`), la usiamo se supportata,
+       altrimenti fallback diretto su "en" (senza controllare navigator, per non
+       "sovrascrivere" una scelta esplicita dell'utente in HA con la lingua del
+       browser — es. utente italiano con HA in francese avrebbe visto italiano).
+     - Se HA non ha lingua impostata (raro), proviamo navigator, poi "en". */
 function resolveLanguage(configLang, hassLanguage) {
   if (configLang && configLang !== "auto") {
     return I18N[configLang] ? configLang : "en";
   }
-  const candidates = [
-    hassLanguage,
-    (typeof navigator !== "undefined" && navigator.language) || "",
-  ];
-  for (const c of candidates) {
-    if (!c) continue;
-    const short = c.toLowerCase().split("-")[0];
+  // configLang è "auto" o vuoto: seguiamo la lingua di HA
+  if (hassLanguage) {
+    const short = String(hassLanguage).toLowerCase().split("-")[0];
+    return I18N[short] ? short : "en";
+  }
+  // HA non ha lingua: proviamo navigator, poi fallback en
+  const navLang = (typeof navigator !== "undefined" && navigator.language) || "";
+  if (navLang) {
+    const short = navLang.toLowerCase().split("-")[0];
     if (I18N[short]) return short;
   }
   return "en";
@@ -2047,6 +2138,13 @@ class CalendarTasksCardEditor extends HTMLElement {
     this._rendered = false;
   }
 
+  /* Restituisce la lingua corrente per i testi dell'editor.
+     Usa la config esplicita (se impostata), altrimenti la lingua di HA. */
+  _lang() {
+    const hassLanguage = this._hass?.locale?.language || this._hass?.language || null;
+    return resolveLanguage(this._config?.language, hassLanguage);
+  }
+
   setConfig(config) {
     // Applica i default alla config "minimal" ricevuta. Senza questo,
     // un toggle che ha default ON apparirebbe OFF nell'editor se non è
@@ -2285,7 +2383,7 @@ class CalendarTasksCardEditor extends HTMLElement {
     const row1 = document.createElement("div");
     row1.className = "field-row";
     const selLbl = document.createElement("label");
-    selLbl.textContent = "Action";
+    selLbl.textContent = t("ed_action", this._lang());
     const sel = document.createElement("select");
     sel.className = "ctc-native-input wide";
     blockHAShortcuts(sel);
@@ -2351,7 +2449,7 @@ class CalendarTasksCardEditor extends HTMLElement {
         const row = document.createElement("div");
         row.className = "field-row";
         const l = document.createElement("label");
-        l.textContent = "Data (JSON)";
+        l.textContent = t("ed_data_json", this._lang());
         const inp = document.createElement("input");
         inp.type = "text";
         inp.className = "ctc-native-input wide";
@@ -2458,7 +2556,7 @@ class CalendarTasksCardEditor extends HTMLElement {
     // un colore "ghost" (grigio chiaro) che diventa attivo non appena l'entità viene scelta.
     const colorBtn = document.createElement("button");
     colorBtn.className = "color-swatch";
-    colorBtn.title = "Choose color";
+    colorBtn.title = t("ed_choose_color", this._lang());
     colorBtn.type = "button";
 
     const palette = document.createElement("div");
@@ -2487,7 +2585,7 @@ class CalendarTasksCardEditor extends HTMLElement {
     const autoBtn = document.createElement("button");
     autoBtn.className = "color-palette-auto";
     autoBtn.type = "button";
-    autoBtn.title = "Automatic";
+    autoBtn.title = t("ed_automatic", this._lang());
     autoBtn.innerHTML = `<ha-icon icon="mdi:autorenew"></ha-icon>`;
     autoBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -2570,11 +2668,11 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const hasNoEntities = (this._config.calendars || []).length === 0
         && (this._config.todos || []).length === 0;
-      const { wrapper, body } = this._makeCollapsible("entities", "Entities", hasNoEntities, "mdi:format-list-bulleted");
+      const { wrapper, body } = this._makeCollapsible("entities", t("ed_entities", lang), hasNoEntities, "mdi:format-list-bulleted");
 
       // Sub-section: Calendars
       {
-        const sub = this._makeCollapsible("entities-cal", "Calendars");
+        const sub = this._makeCollapsible("entities-cal", t("ed_calendars", lang));
         const calList = document.createElement("div");
         calList.className = "entity-list";
         (this._config.calendars || []).forEach((id, i) => calList.appendChild(this._makeEntityRow("calendar", id, i)));
@@ -2596,7 +2694,7 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       // Sub-section: Todo lists
       {
-        const sub = this._makeCollapsible("entities-todo", "Todo lists");
+        const sub = this._makeCollapsible("entities-todo", t("ed_todo_lists", lang));
         const todoList = document.createElement("div");
         todoList.className = "entity-list";
         (this._config.todos || []).forEach((id, i) => todoList.appendChild(this._makeEntityRow("todo", id, i)));
@@ -2621,15 +2719,15 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── General ──
     {
-      const { wrapper, body } = this._makeCollapsible("gen", "General", false, "mdi:tune");
+      const { wrapper, body } = this._makeCollapsible("gen", t("ed_general", lang), false, "mdi:tune");
 
-      body.appendChild(this._makeToggle("Show title", this._config.show_title !== false,
+      body.appendChild(this._makeToggle(t("ed_show_title", lang), this._config.show_title !== false,
         v => { this._config.show_title = v; this._fire(); }));
 
       const rowTitle = document.createElement("div");
       rowTitle.className = "field-row";
       const lblTitle = document.createElement("label");
-      lblTitle.textContent = "Title";
+      lblTitle.textContent = t("ed_title", lang);
       const inpTitle = this._makeInput("inp-title", "text", this._config.title || "Agenda", "wide",
         v => { this._config.title = v; this._fire(); });
       rowTitle.append(lblTitle, inpTitle);
@@ -2638,15 +2736,15 @@ class CalendarTasksCardEditor extends HTMLElement {
       const rowDays = document.createElement("div");
       rowDays.className = "field-row";
       const lblDays = document.createElement("label");
-      lblDays.textContent = "Days to show";
+      lblDays.textContent = t("ed_days_to_show", lang);
       const inpDays = this._makeInput("inp-days", "number", this._config.days || 7, "narrow",
         v => { this._config.days = parseInt(v) || 7; this._fire(); });
       rowDays.append(lblDays, inpDays);
       body.appendChild(rowDays);
 
-      body.appendChild(this._makeToggle("Show refresh button", this._config.show_refresh !== false,
+      body.appendChild(this._makeToggle(t("ed_show_refresh", lang), this._config.show_refresh !== false,
         v => { this._config.show_refresh = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show collapse button", this._config.show_collapse_button !== false,
+      body.appendChild(this._makeToggle(t("ed_show_collapse", lang), this._config.show_collapse_button !== false,
         v => { this._config.show_collapse_button = v; this._fire(); }));
 
       // ── Limit events visible: toggle + numero condizionale ──
@@ -2658,7 +2756,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowMaxEv.style.display = limitEnabled ? "" : "none";
       rowMaxEv.style.paddingLeft = "16px";  // indentazione visiva
       const lblMaxEv = document.createElement("label");
-      lblMaxEv.textContent = "Max events visible";
+      lblMaxEv.textContent = t("ed_max_events_visible", lang);
       const inpMaxEv = this._makeInput("inp-maxev", "number",
         this._config.max_events_visible != null ? this._config.max_events_visible : 3, "narrow",
         v => {
@@ -2669,7 +2767,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowMaxEv.append(lblMaxEv, inpMaxEv);
 
       // Poi creo il toggle, che ora può riferirsi a rowMaxEv
-      body.appendChild(this._makeToggle("Limit visible events (enable scrollbar)", limitEnabled,
+      body.appendChild(this._makeToggle(t("ed_limit_events", lang), limitEnabled,
         v => {
           this._config.limit_events_visible = v;
           rowMaxEv.style.display = v ? "" : "none";
@@ -2680,7 +2778,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       body.appendChild(rowMaxEv);
 
       // Compact mode: riduce spazi verticali per card più compatta
-      body.appendChild(this._makeToggle("Compact mode (reduced spacing)", this._config.compact_mode === true,
+      body.appendChild(this._makeToggle(t("ed_compact_mode", lang), this._config.compact_mode === true,
         v => { this._config.compact_mode = v; this._fire(); }));
 
       root.appendChild(wrapper);
@@ -2688,7 +2786,7 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── Localization ──
     {
-      const { wrapper, body } = this._makeCollapsible("loc", "Localization", false, "mdi:translate");
+      const { wrapper, body } = this._makeCollapsible("loc", t("ed_localization", lang), false, "mdi:translate");
 
       body.appendChild(this._makeSelect("Language",
         this._config.language || "auto",
@@ -2723,23 +2821,23 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── Display ──
     {
-      const { wrapper, body } = this._makeCollapsible("display", "Display", false, "mdi:eye");
+      const { wrapper, body } = this._makeCollapsible("display", t("ed_display", lang), false, "mdi:eye");
 
-      body.appendChild(this._makeToggle("Show week number", !!this._config.show_week_number,
+      body.appendChild(this._makeToggle(t("ed_show_week_number", lang), !!this._config.show_week_number,
         v => { this._config.show_week_number = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show end time", !!this._config.show_end_time,
+      body.appendChild(this._makeToggle(t("ed_show_end_time", lang), !!this._config.show_end_time,
         v => { this._config.show_end_time = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show empty days", !!this._config.show_empty_days,
+      body.appendChild(this._makeToggle(t("ed_show_empty_days", lang), !!this._config.show_empty_days,
         v => { this._config.show_empty_days = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show relative time (in X days)", this._config.show_relative_time !== false,
+      body.appendChild(this._makeToggle(t("ed_show_relative_time", lang), this._config.show_relative_time !== false,
         v => { this._config.show_relative_time = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show source (calendar/list)", !!this._config.show_source,
+      body.appendChild(this._makeToggle(t("ed_show_source", lang), !!this._config.show_source,
         v => { this._config.show_source = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show description", this._config.show_description !== false,
+      body.appendChild(this._makeToggle(t("ed_show_description", lang), this._config.show_description !== false,
         v => { this._config.show_description = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Show location (calendar events)", !!this._config.show_location,
+      body.appendChild(this._makeToggle(t("ed_show_location", lang), !!this._config.show_location,
         v => { this._config.show_location = v; this._fire(); }));
-      body.appendChild(this._makeToggle("Make location clickable (opens maps)", !!this._config.location_clickable,
+      body.appendChild(this._makeToggle(t("ed_location_clickable", lang), !!this._config.location_clickable,
         v => { this._config.location_clickable = v; this._fire(); }));
 
       root.appendChild(wrapper);
@@ -2747,7 +2845,7 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── Weather ──
     {
-      const { wrapper, body } = this._makeCollapsible("weather", "Weather", false, "mdi:weather-partly-cloudy");
+      const { wrapper, body } = this._makeCollapsible("weather", t("ed_weather", lang), false, "mdi:weather-partly-cloudy");
 
       // Master toggle: attiva/disattiva l'intera funzionalità meteo
       const showWeather = this._config.show_weather === true;
@@ -2762,7 +2860,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       const rowEntity = document.createElement("div");
       rowEntity.className = "field-row";
       const lblEntity = document.createElement("label");
-      lblEntity.textContent = "Weather entity";
+      lblEntity.textContent = t("ed_weather_entity", lang);
 
       const entityWrap = document.createElement("div");
       entityWrap.style.position = "relative";
@@ -2815,17 +2913,17 @@ class CalendarTasksCardEditor extends HTMLElement {
       subFields.appendChild(rowEntity);
 
       // Toggle: mostra meteo "oggi" in alto
-      subFields.appendChild(this._makeToggle("Show today's weather (top widget)",
+      subFields.appendChild(this._makeToggle(t("ed_show_weather_today", lang),
         this._config.show_weather_today !== false,
         v => { this._config.show_weather_today = v; this._fire(); }));
 
       // Toggle: mostra meteo per ogni giorno (sotto la data)
-      subFields.appendChild(this._makeToggle("Show weather per day (next to date)",
+      subFields.appendChild(this._makeToggle(t("ed_show_weather_per_day", lang),
         this._config.show_weather_per_day === true,
         v => { this._config.show_weather_per_day = v; this._fire(); }));
 
       // Master toggle (in cima alla sezione)
-      body.appendChild(this._makeToggle("Show weather", showWeather,
+      body.appendChild(this._makeToggle(t("ed_show_weather", lang), showWeather,
         v => {
           this._config.show_weather = v;
           subFields.style.display = v ? "" : "none";
@@ -2839,15 +2937,15 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── Tasks ──
     {
-      const { wrapper, body } = this._makeCollapsible("tasks", "Tasks", false, "mdi:checkbox-marked-circle-outline");
+      const { wrapper, body } = this._makeCollapsible("tasks", t("ed_tasks", lang), false, "mdi:checkbox-marked-circle-outline");
 
-      body.appendChild(this._makeToggle("Show overdue tasks", this._config.show_overdue !== false,
+      body.appendChild(this._makeToggle(t("ed_show_overdue", lang), this._config.show_overdue !== false,
         v => { this._config.show_overdue = v; this._fire(); }));
 
       const rowOverdueDays = document.createElement("div");
       rowOverdueDays.className = "field-row";
       const lblOverdueDays = document.createElement("label");
-      lblOverdueDays.textContent = "Overdue days to show (0 = all)";
+      lblOverdueDays.textContent = t("ed_overdue_days", lang);
       const inpOverdueDays = this._makeInput("inp-overdue-days", "number", this._config.overdue_days != null ? this._config.overdue_days : 0, "narrow",
         v => {
           const n = parseInt(v);
@@ -2857,7 +2955,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowOverdueDays.append(lblOverdueDays, inpOverdueDays);
       body.appendChild(rowOverdueDays);
 
-      body.appendChild(this._makeToggle("Show completed tasks", this._config.show_completed !== false,
+      body.appendChild(this._makeToggle(t("ed_show_completed", lang), this._config.show_completed !== false,
         v => { this._config.show_completed = v; this._fire(); }));
 
       const rowCompletedDays = document.createElement("div");
@@ -2873,7 +2971,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowCompletedDays.append(lblCompletedDays, inpCompletedDays);
       body.appendChild(rowCompletedDays);
 
-      body.appendChild(this._makeToggle("Allow completing tasks", this._config.allow_complete !== false,
+      body.appendChild(this._makeToggle(t("ed_allow_complete", lang), this._config.allow_complete !== false,
         v => { this._config.allow_complete = v; this._fire(); }));
 
       root.appendChild(wrapper);
@@ -2881,7 +2979,7 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── Filters ──
     {
-      const { wrapper, body } = this._makeCollapsible("filters", "Filters", false, "mdi:filter-variant");
+      const { wrapper, body } = this._makeCollapsible("filters", t("ed_filters", lang), false, "mdi:filter-variant");
 
       // Stato locale: array di keyword corrente
       const getExcludeList = () => {
@@ -3017,15 +3115,15 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── Interactions ──
     {
-      const { wrapper, body } = this._makeCollapsible("inter", "Interactions", false, "mdi:gesture-tap");
+      const { wrapper, body } = this._makeCollapsible("inter", t("ed_interactions", lang), false, "mdi:gesture-tap");
       body.classList.add("inter-compact");
-      body.appendChild(this._makeActionEditor("Tap",
+      body.appendChild(this._makeActionEditor(t("ed_tap", lang),
         this._config.tap_action,
         cfg => { this._config.tap_action = cfg; this._fire(); }));
-      body.appendChild(this._makeActionEditor("Hold",
+      body.appendChild(this._makeActionEditor(t("ed_hold", lang),
         this._config.hold_action,
         cfg => { this._config.hold_action = cfg; this._fire(); }));
-      body.appendChild(this._makeActionEditor("Double tap",
+      body.appendChild(this._makeActionEditor(t("ed_double_tap", lang),
         this._config.double_tap_action,
         cfg => { this._config.double_tap_action = cfg; this._fire(); }));
       root.appendChild(wrapper);
