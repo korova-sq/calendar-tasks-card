@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-XX-XX
+
+### Added
+
+- **Fully localized visual editor**: all section titles, toggle labels, and field
+  names in the editor are now translated based on your Home Assistant language
+  setting.
+- Translations available in Italian and English.
+- Localized elements: section titles (Entities, General, Localization, Display,
+  Weather, Tasks, Filters, Interactions), all toggles (Show title, Compact mode,
+  Show weather, etc.), field labels (Days to show, Weather entity, Overdue days,
+  etc.), action editor (Tap, Hold, Double tap), and color picker tooltips.
+
+### Fixed
+
+- **Language fallback logic**: if Home Assistant is set to an unsupported
+  language (French, German, Spanish, etc.), the card now correctly falls back
+  to English. Previously, it could incorrectly pick up the browser's language.
+
+### Notes
+
+- No changes to functionality — this is a UI improvement.
+- Existing configurations continue to work as before.
+- The card display language was already localized in previous versions; this
+  release completes the localization to the editor UI.
+
+[1.5.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.5.0
+
 ## [1.4.0] - 2026-XX-XX
 
 ### Added
