@@ -1459,7 +1459,7 @@ class CalendarTasksCard extends HTMLElement {
         if (Array.isArray(resp)) resp.forEach(ev => results.push({ ...ev, _source: id }));
       } catch (e) { console.warn(`[ctc] Errore calendario ${id}:`, e); }
     }
-    results.sort((a, b) => new Date(a.start.dateTime || a.start.date) - new Date(b.start.dateTime || b.start.date));
+    results.sort((a, b) => parseDueDate(a.start.dateTime || a.start.date) - parseDueDate(b.start.dateTime || b.start.date));
     return results;
   }
 
@@ -1799,7 +1799,8 @@ class CalendarTasksCard extends HTMLElement {
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       const dk = dayKey(date);
-      const dayEvents = this._events.filter(ev => dayKey(new Date(ev.start.dateTime || ev.start.date)) === dk);
+      // parseDueDate: new Date("YYYY-MM-DD") è mezzanotte UTC, non locale.
+      const dayEvents = this._events.filter(ev => dayKey(parseDueDate(ev.start.dateTime || ev.start.date)) === dk);
       const dayTasks = this._tasks.filter(task => {
         if (task.status === "completed") return false;
         const parsed = parseDueDate(task.due);
@@ -1858,7 +1859,7 @@ class CalendarTasksCard extends HTMLElement {
           // Tempo relativo "Manca X giorni" (per eventi è solo nel futuro, niente "scaduto")
           let rel = "";
           if (this._config.show_relative_time) {
-            const evDate = new Date(ev.start.dateTime || ev.start.date);
+            const evDate = parseDueDate(ev.start.dateTime || ev.start.date);
             const relText = formatRelativeTime(evDate, undefined, lang);
             if (relText) rel = `<div class="ctc-event-relative">${relText}</div>`;
           }
