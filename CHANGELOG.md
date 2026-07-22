@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-XX-XX
+
+### Added
+
+- **Multi-day events**: events spanning several days now appear on every day
+  they cover, instead of only on their start date. Each day shows a counter
+  next to the title, e.g. `Holiday (2/6)`, like Google Calendar and Apple
+  Calendar.
+- `multi_day_events` option (default: `true`) to turn this off and go back to
+  showing multi-day events on their start date only.
+- **German translation** (`de`), contributed by @CptPICHU. The card and the
+  visual editor are now available in Italian, English and German.
+
+### Fixed
+
+- **All-day events in timezones behind UTC**: all-day events no longer render
+  one day early in timezones west of UTC (e.g. the Americas). Date-only values
+  like `2026-07-21` were parsed as UTC midnight, which fell on the previous day
+  in local time. Diagnosed and fixed by @kielsucks.
+
+### Notes
+
+- On continuation days of a multi-day event, the card shows "All day" instead
+  of the start time, and the relative time label is hidden.
+- The multi-day and timezone fixes affect all calendar integrations (Google,
+  CalDAV, iCloud, Local Calendar) — neither was specific to one provider.
+- Language still follows your Home Assistant setting, with English as fallback
+  for unsupported languages.
+
+### Credits
+
+- Multi-day events suggested by NavNav on the Home Assistant community forum.
+- Timezone fix diagnosed and fixed by @kielsucks (issue #3, PR #2).
+- German translation by @CptPICHU (issue #4).
+- Thanks to all three for helping the card grow!
+
+[1.6.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.6.0
+
 ## [1.5.0] - 2026-XX-XX
 
 ### Added
