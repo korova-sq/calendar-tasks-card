@@ -20,6 +20,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 📋 **No Date section**: active tasks without a due date
 - 🗂 **Completed section**: recently finished tasks for context
 - ⏱ **Relative time**: "Tomorrow", "In 3 days", "Yesterday", "1 week overdue"
+- 🗓 **Multi-day events**: events spanning several days appear on each one, with a day counter
 - 📍 **Event location**: shows the location of calendar events with optional click-to-maps
 - 📆 **Week numbers**: ISO 8601 week separators (toggle on/off)
 - 🔽 **Collapsible**: hide everything with one click, state persists
@@ -28,7 +29,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - ☀️ **Weather support**: optional today's weather widget and per-day forecast
 - 🔍 **Exclude filter**: hide events and tasks with specific keywords in their titles
 - 🔄 **Force refresh**: button to update all integrations on demand
-- 🌐 **Internationalization**: English and Italian, auto-detects from system (card display + visual editor)
+- 🌐 **Internationalization**: English, Italian and German, auto-detects from system (card display + visual editor)
 - 🕐 **Time format**: 12h or 24h, follows system preferences
 - 👆 **Customizable actions**: tap, hold, double-tap (Home Assistant standard)
 - 🪶 **Clean YAML**: only non-default settings are saved
@@ -134,7 +135,7 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 ### 🌐 Localization
 | Option | Default | Values |
 |---|---|---|
-| `language` | `auto` | `auto`, `en`, `it` |
+| `language` | `auto` | `auto`, `en`, `it`, `de` |
 | `time_format` | `auto` | `auto`, `24h`, `12h` |
 | `first_day_of_week` | `auto` | `auto`, `monday`, `sunday`, `saturday` |
 
@@ -143,6 +144,7 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 |---|---|---|
 | `show_week_number` | `false` | ISO 8601 week separators |
 | `show_end_time` | `false` | Show `HH:MM–HH:MM` for events |
+| `multi_day_events` | `true` | Show multi-day events on every day they span, with a `(2/6)` day counter |
 | `show_empty_days` | `false` | Show days with no events |
 | `show_relative_time` | `true` | "Tomorrow", "In 3 days" labels |
 | `show_source` | `false` | Show entity name as subtitle |
