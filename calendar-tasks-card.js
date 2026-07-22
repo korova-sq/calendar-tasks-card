@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.5.0
+ * calendar-tasks-card v1.6.0
  */
 
-const CARD_VERSION = "1.5.0";
+const CARD_VERSION = "1.6.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -57,6 +57,7 @@ const DEFAULT_CONFIG = {
   weather_entity: "",             // entità weather di HA da usare (es. weather.home)
   show_weather_today: true,       // mostra widget meteo dettagliato in alto (solo oggi)
   show_weather_per_day: false,    // mostra meteo (icona + temp) sotto la data di ogni giorno
+  multi_day_events: true,         // mostra gli eventi multi-giorno in tutti i giorni che coprono
   exclude: [],                    // lista di keyword: gli eventi/task con titolo che le contiene vengono nascosti
   entity_colors: {},
   tap_action: DEFAULT_ACTION,
@@ -257,6 +258,13 @@ const STYLES = `
     overflow-wrap: break-word;
   }
   .ctc-event-title.done { text-decoration: line-through; color: var(--ctc-hint); }
+  /* Contatore "(2/6)" per eventi multi-giorno: discreto, accanto al titolo */
+  .ctc-day-counter {
+    margin-left: 6px;
+    font-size: 0.85em;
+    font-weight: 400;
+    color: var(--ctc-muted);
+  }
   .ctc-event-sub {
     font-size: 11px;
     color: var(--ctc-hint);
@@ -677,6 +685,23 @@ const WEATHER_LABELS = {
     "windy": "Windy",
     "windy-variant": "Windy",
   },
+  de: {
+    "clear-night": "Klar",
+    "cloudy": "Bewölkt",
+    "exceptional": "Außergewöhnlich",
+    "fog": "Nebel",
+    "hail": "Hagel",
+    "lightning": "Gewitter",
+    "lightning-rainy": "Gewitter und Regen",
+    "partlycloudy": "Teilweise bewölkt",
+    "pouring": "Starkregen",
+    "rainy": "Regnerisch",
+    "snowy": "Schnee",
+    "snowy-rainy": "Schnee und Regen",
+    "sunny": "Sonnig",
+    "windy": "Windig",
+    "windy-variant": "Windig",
+  },
 };
 
 function getWeatherLabel(condition, lang) {
@@ -706,6 +731,56 @@ function getForecastForDay(forecastArray, targetDate) {
    Match parziale (sub-string) e case-insensitive: "lavoro" matcha "Riunione di lavoro".
    Accetta sia stringhe che array; ritorna true se il titolo va NASCOSTO.
    Le keyword vuote vengono ignorate (per non nascondere accidentalmente tutto). */
+/* ─── Helper eventi multi-giorno ────────────────────────────────── */
+/* Calcola l'intervallo di giorni coperto da un evento.
+   Ritorna { start, end, totalDays } con start/end normalizzati a mezzanotte.
+
+   ATTENZIONE al formato di `end`, che differisce tra i due tipi di evento:
+   - Eventi ALL-DAY: HA/Google usano `end.date` ESCLUSIVO. Un evento che dura
+     il 10 e l'11 ha end.date = "2026-06-12". Va sottratto un giorno.
+   - Eventi CON ORARIO: `end.dateTime` è inclusivo (è il momento in cui finisce),
+     quindi il giorno di fine è semplicemente la sua data.
+   Senza questa distinzione un evento all-day di 1 giorno risulterebbe di 2. */
+function getEventDayRange(ev) {
+  const isAllDay = !!(ev.start && ev.start.date && !ev.start.dateTime);
+  const startRaw = ev.start?.dateTime || ev.start?.date;
+  const endRaw = ev.end?.dateTime || ev.end?.date;
+  // parseEventDate interpreta le date-only in orario locale (non UTC), evitando
+  // lo slittamento di un giorno nei fusi a ovest di UTC.
+  const start = parseEventDate(startRaw);
+  if (!start || isNaN(start)) return null;
+  start.setHours(0, 0, 0, 0);
+
+  // Se manca `end` (alcune integrazioni non lo espongono), l'evento dura 1 giorno
+  if (!endRaw) return { start, end: start, totalDays: 1 };
+
+  const end = parseEventDate(endRaw);
+  if (!end || isNaN(end)) return { start, end: start, totalDays: 1 };
+  end.setHours(0, 0, 0, 0);
+  if (isAllDay) end.setDate(end.getDate() - 1);  // end esclusivo → ultimo giorno reale
+
+  // Un end precedente allo start (dati incoerenti) viene trattato come 1 giorno
+  if (end < start) return { start, end: start, totalDays: 1 };
+
+  const totalDays = Math.round((end - start) / 86400000) + 1;
+  return { start, end, totalDays };
+}
+
+/* Dice se una data cade nell'intervallo coperto dall'evento e, in caso
+   affermativo, a quale giorno dell'evento corrisponde (1-based).
+   Ritorna { inRange, dayIndex, totalDays }. */
+function getEventDayPosition(ev, date) {
+  const range = getEventDayRange(ev);
+  if (!range) return { inRange: false, dayIndex: 0, totalDays: 0 };
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  if (d < range.start || d > range.end) {
+    return { inRange: false, dayIndex: 0, totalDays: range.totalDays };
+  }
+  const dayIndex = Math.round((d - range.start) / 86400000) + 1;
+  return { inRange: true, dayIndex, totalDays: range.totalDays };
+}
+
 function isExcluded(title, excludeList) {
   if (!title || !excludeList) return false;
   // Normalizza in array
@@ -843,6 +918,7 @@ const I18N = {
     ed_compact_mode: "Modalità compatta (spazi ridotti)",
     ed_show_week_number: "Mostra numero settimana",
     ed_show_end_time: "Mostra orario di fine",
+    ed_multi_day_events: "Mostra eventi multi-giorno in tutti i giorni",
     ed_show_empty_days: "Mostra giorni vuoti",
     ed_show_relative_time: "Mostra tempo relativo (tra X giorni)",
     ed_show_source: "Mostra origine (calendario/lista)",
@@ -924,6 +1000,7 @@ const I18N = {
     ed_compact_mode: "Compact mode (reduced spacing)",
     ed_show_week_number: "Show week number",
     ed_show_end_time: "Show end time",
+    ed_multi_day_events: "Show multi-day events on every day",
     ed_show_empty_days: "Show empty days",
     ed_show_relative_time: "Show relative time (in X days)",
     ed_show_source: "Show source (calendar/list)",
@@ -963,6 +1040,89 @@ const I18N = {
     overdue_months_n: (n) => `About ${n} months overdue`,
     days: ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
     months: ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"],
+  },
+  // Traduzione tedesca contribuita da @CptPICHU (issue #4). Grazie!
+  de: {
+    agenda: "Agenda",
+    today: "Heute",
+    tomorrow: "Morgen",
+    yesterday: "Gestern",
+    no_events: (n) => n === 1 ? "Morgen kein Ereignis" : `Kein Ereignis innerhalb ${n} Tage`,
+    no_events_day: "Keine Ereignisse",
+    all_day: "Ganztägig",
+    overdue: "Überfällig",
+    no_date: "Kein Datum",
+    completed: "Erledigt",
+    open_in_maps: "Öffne Karte",
+    weather_today: "Heute",
+    weather_min: "Min",
+    weather_max: "Max",
+    weather_humidity: "Luftfeuchte",
+    exclude_keywords: "Wörter ausschließen",
+    exclude_placeholder: "zb. Geburtstag, Meeting",
+    exclude_add: "Hinzufügen",
+    exclude_help: "Ereignisse und Aufgaben, die diese Wörter enthalten, werden nicht angezeigt",
+    // ─── Editor UI ───
+    ed_entities: "Entities",
+    ed_calendars: "Kalender",
+    ed_todo_lists: "Todo Liste",
+    ed_general: "Allgemein",
+    ed_localization: "Sprache",
+    ed_display: "Anzeige",
+    ed_weather: "Wetter",
+    ed_tasks: "Aufgaben",
+    ed_filters: "Filter",
+    ed_interactions: "Interaktionen",
+    ed_title: "Titel",
+    ed_days_to_show: "Tage anzeigen",
+    ed_max_events_visible: "Max Ereignisse",
+    ed_show_title: "Titel anzeigen",
+    ed_show_refresh: "Neu laden anzeigen",
+    ed_show_collapse: "Zeige Einklapp-Button",
+    ed_limit_events: "Ereignisanzeige begrenzen (Scrollbar)",
+    ed_compact_mode: "Kompaktmodus (kleinere Abstände)",
+    ed_show_week_number: "Zeige Kalenderwoche",
+    ed_show_end_time: "Zeige Endzeit",
+    ed_multi_day_events: "Mehrtägige Ereignisse an allen Tagen zeigen",
+    ed_show_empty_days: "Zeige leere Tage",
+    ed_show_relative_time: "Zeige relative Zeit (in X Tagen)",
+    ed_show_source: "Zeige Quelle",
+    ed_show_description: "Zeige Beschreibung",
+    ed_show_location: "Zeige Ereignisorte",
+    ed_location_clickable: "Ort klickbar (öffnet Karte)",
+    ed_weather_entity: "Wetter Entität",
+    ed_show_weather: "Zeige Wetter",
+    ed_show_weather_today: "Zeige heutiges Wetter",
+    ed_show_weather_per_day: "Zeige Wetterbericht (nächste Tage)",
+    ed_show_overdue: "Zeige überfällige Aufgaben",
+    ed_overdue_days: "Überfällig anzeigen für X Tage (0 = Alle)",
+    ed_show_completed: "Zeige erledigte Aufgaben",
+    ed_allow_complete: "Erlaube Aufgaben abhaken",
+    ed_action: "Aktion",
+    ed_data_json: "Daten (JSON)",
+    ed_choose_color: "Farbe wählen",
+    ed_automatic: "Automatisch",
+    ed_tap: "Klick",
+    ed_hold: "Halten",
+    ed_double_tap: "Doppelklick",
+    week_short: "KW",
+    collapse_all: "Alle einklappen",
+    expand_all: "Alle ausklappen",
+    refresh: "Neu laden",
+    days_missing_one: "In 1 Tag",
+    days_missing_n: (n) => `In ${n} Tagen`,
+    week_missing_one: "In 1 Woche",
+    weeks_missing_two: "In 2 Wochen",
+    month_missing_one: "In etwa 1 Monat",
+    months_missing_n: (n) => `In etwa ${n} Monaten`,
+    overdue_one: "1 Tag überfällig",
+    overdue_n: (n) => `${n} Tage überfällig`,
+    overdue_week_one: "1 Woche überfällig",
+    overdue_weeks_two: "2 Wochen überfällig",
+    overdue_month_one: "Etwa 1 Monat überfällig",
+    overdue_months_n: (n) => `Etwa ${n} Monate überfällig`,
+    days: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
+    months: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
   },
 };
 
@@ -1155,6 +1315,20 @@ function parseDueDate(due) {
   // ISO standard con orario / timezone esplicito → lascia fare a Date
   const d = new Date(due);
   return isNaN(d) ? null : d;
+}
+
+/* Costruisce una Date corretta da un raw di evento (start o end).
+   CRITICO per i fusi orari: le date all-day arrivano come "2026-07-21" e
+   `new Date("2026-07-21")` le interpreta come mezzanotte UTC. In un fuso a
+   ovest di UTC (es. America/New_York = UTC-4) quella mezzanotte UTC cade alle
+   20:00 del giorno PRIMA in orario locale, quindi l'evento finiva nel giorno
+   sbagliato. parseDueDate gestisce già le date-only interpretandole in orario
+   locale, quindi la riusiamo. Le date con orario (`dateTime`) hanno un offset
+   e vengono lasciate a Date come prima.
+   Grazie a @kielsucks per la diagnosi e il fix originale (issue #3 / PR #2). */
+function parseEventDate(raw) {
+  if (!raw) return null;
+  return parseDueDate(raw);
 }
 
 /* ─── Blocca shortcut HA su tutti gli input della pagina ────────── */
@@ -1459,7 +1633,7 @@ class CalendarTasksCard extends HTMLElement {
         if (Array.isArray(resp)) resp.forEach(ev => results.push({ ...ev, _source: id }));
       } catch (e) { console.warn(`[ctc] Errore calendario ${id}:`, e); }
     }
-    results.sort((a, b) => new Date(a.start.dateTime || a.start.date) - new Date(b.start.dateTime || b.start.date));
+    results.sort((a, b) => parseEventDate(a.start.dateTime || a.start.date) - parseEventDate(b.start.dateTime || b.start.date));
     return results;
   }
 
@@ -1799,7 +1973,25 @@ class CalendarTasksCard extends HTMLElement {
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       const dk = dayKey(date);
-      const dayEvents = this._events.filter(ev => dayKey(new Date(ev.start.dateTime || ev.start.date)) === dk);
+      // Eventi del giorno. Se `multi_day_events` è attivo (default), un evento
+      // che copre più giorni viene mostrato in TUTTI i giorni del suo intervallo,
+      // non solo in quello di inizio. Salviamo su ogni evento la posizione nel
+      // suo intervallo (_ctcDayIndex / _ctcTotalDays) per il contatore "(2/6)".
+      const multiDayEnabled = this._config.multi_day_events !== false;
+      const dayEvents = this._events.filter(ev => {
+        if (multiDayEnabled) {
+          const pos = getEventDayPosition(ev, date);
+          if (!pos.inRange) return false;
+          ev._ctcDayIndex = pos.dayIndex;
+          ev._ctcTotalDays = pos.totalDays;
+          return true;
+        }
+        // Comportamento classico: solo il giorno di inizio
+        if (dayKey(parseEventDate(ev.start.dateTime || ev.start.date)) !== dk) return false;
+        ev._ctcDayIndex = 1;
+        ev._ctcTotalDays = 1;
+        return true;
+      });
       const dayTasks = this._tasks.filter(task => {
         if (task.status === "completed") return false;
         const parsed = parseDueDate(task.due);
@@ -1832,9 +2024,19 @@ class CalendarTasksCard extends HTMLElement {
         const groupColor = getEntityColor(sourceId, this._config);
         const rowsHtml = group.map(ev => {
           const allDay = isAllDay(ev);
+          // Posizione dell'evento nel suo intervallo multi-giorno (impostata dal filtro).
+          // dayIndex 1 = giorno di inizio, > 1 = prosecuzione dell'evento.
+          const dayIndex = ev._ctcDayIndex || 1;
+          const totalDays = ev._ctcTotalDays || 1;
+          const isContinuation = totalDays > 1 && dayIndex > 1;
           const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
           const e = this._config.show_end_time ? fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale) : null;
-          const timeStr = allDay ? t("all_day", lang) : (e ? `${s}–${e}` : s);
+          // Nei giorni di prosecuzione l'orario di inizio non ha senso (l'evento è
+          // già cominciato), quindi mostriamo "tutto il giorno".
+          const timeStr = (allDay || isContinuation) ? t("all_day", lang) : (e ? `${s}–${e}` : s);
+          // Contatore "(2/6)" accanto al titolo, come fanno Google e Apple Calendar
+          const dayCounter = totalDays > 1
+            ? `<span class="ctc-day-counter">(${dayIndex}/${totalDays})</span>` : "";
           const sub = this._config.show_source !== false ? `<div class="ctc-event-sub">${ev._source.replace("calendar.", "")}</div>` : "";
           const descClean = this._config.show_description ? sanitizeDescription(ev.description) : "";
           const desc = descClean ? `<div class="ctc-event-desc">${descClean}</div>` : "";
@@ -1855,14 +2057,16 @@ class CalendarTasksCard extends HTMLElement {
               }
             }
           }
-          // Tempo relativo "Manca X giorni" (per eventi è solo nel futuro, niente "scaduto")
+          // Tempo relativo "Manca X giorni" (per eventi è solo nel futuro, niente "scaduto").
+          // Nei giorni di prosecuzione lo nascondiamo: "mancano 2 giorni" su un evento
+          // già iniziato sarebbe fuorviante.
           let rel = "";
-          if (this._config.show_relative_time) {
-            const evDate = new Date(ev.start.dateTime || ev.start.date);
+          if (this._config.show_relative_time && !isContinuation) {
+            const evDate = parseEventDate(ev.start.dateTime || ev.start.date);
             const relText = formatRelativeTime(evDate, undefined, lang);
             if (relText) rel = `<div class="ctc-event-relative">${relText}</div>`;
           }
-          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}</div>${desc}${loc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
+          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}${dayCounter}</div>${desc}${loc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
         }).join("");
         return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
@@ -2794,6 +2998,7 @@ class CalendarTasksCardEditor extends HTMLElement {
           { value: "auto", text: "System default" },
           { value: "it", text: "Italiano" },
           { value: "en", text: "English" },
+          { value: "de", text: "Deutsch" },
         ],
         v => { this._config.language = v; this._fire(); }));
 
@@ -2827,6 +3032,8 @@ class CalendarTasksCardEditor extends HTMLElement {
         v => { this._config.show_week_number = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_end_time", lang), !!this._config.show_end_time,
         v => { this._config.show_end_time = v; this._fire(); }));
+      body.appendChild(this._makeToggle(t("ed_multi_day_events", lang), this._config.multi_day_events !== false,
+        v => { this._config.multi_day_events = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_empty_days", lang), !!this._config.show_empty_days,
         v => { this._config.show_empty_days = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_relative_time", lang), this._config.show_relative_time !== false,
