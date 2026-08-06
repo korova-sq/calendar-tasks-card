@@ -27,6 +27,8 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 📋 **Max events visible**: optionally limit visible events with a smooth internal scrollbar
 - 📏 **Compact mode**: reduced spacing option for tighter layouts
 - ☀️ **Weather support**: optional today's weather widget and per-day forecast
+- 🖼 **Custom background**: transparent mode or background image with a light/dark overlay
+- ➕ **Add event/task**: inline form to create calendar events and todo tasks without leaving the card
 - 🔍 **Exclude filter**: hide events and tasks with specific keywords in their titles
 - 🔄 **Force refresh**: button to update all integrations on demand
 - 🌐 **Internationalization**: English, Italian and German, auto-detects from system (card display + visual editor)
@@ -122,6 +124,7 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `show_title` | `true` | Show the title bar |
 | `days` | `7` | Days to look ahead |
 | `show_refresh` | `true` | Show 🔄 refresh button |
+| `show_add_event` | `false` | Show ➕ button in the header to add events/tasks (see below) |
 | `show_collapse_button` | `true` | Show ▲ collapse button |
 | `limit_events_visible` | `false` | Enable scrollbar to limit visible events |
 | `max_events_visible` | `3` | Number of events visible when `limit_events_visible` is true |
@@ -151,6 +154,30 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `show_description` | `true` | Show event/task description |
 | `show_location` | `false` | Show event location with map pin icon (calendar events only) |
 | `location_clickable` | `false` | Make location clickable, opens Google Maps in new tab |
+
+### 🖼 Background
+| Option | Default | Description |
+|---|---|---|
+| `transparent` | `false` | Remove card background, shadow and border so it blends into the dashboard |
+| `background_image` | `null` | Background image, as a URL or a `/local/…` path |
+| `background_overlay` | `0` | Veil over the image, from `-1` (full white) through `0` (none) to `+1` (full black), to keep the text readable |
+
+Background image and transparency are mutually exclusive: if an image is set, it takes precedence.
+
+Past a dark overlay threshold, the card text automatically switches to a light colour. Transparency also works with "glass" themes and card-mod.
+
+These options use the same names as in [sun-weather-card](https://github.com/korova-sq/sun-weather-card), so both cards are configured the same way.
+
+### ➕ Add event/task
+
+When `show_add_event` is enabled, a button appears in the header that opens an inline form to create a new calendar event or todo task — without leaving the card or reloading the page.
+
+- Choose **event** or **task** (only shown if you have both calendars and todo lists configured)
+- Pick the target calendar or todo list from a dropdown
+- **Events**: title, all-day toggle, start/end, optional location and description
+- **Tasks**: title, optional due date, optional description
+
+The button only appears if at least one calendar or todo list is configured. The form uses Home Assistant's official `calendar.create_event` and `todo.add_item` services, so creating events only works for calendars that support it (e.g. Local Calendar, CalDAV) — read-only calendars won't accept new events. Recurring events aren't supported, since the underlying service doesn't offer it; create those from the Calendar tab as usual.
 
 ### ✅ Tasks
 | Option | Default | Description |

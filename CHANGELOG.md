@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-XX-XX
+
+### Added
+
+- **Transparent background**: a new `transparent` option removes the card
+  background, shadow and border, so the card blends into your dashboard.
+- **Background image**: a new `background_image` option accepts a URL or a
+  `/local/…` path and paints it as the card background.
+- **Overlay control**: a single `background_overlay` slider from `-1` to `+1`
+  puts a light or dark veil over the image so the text stays readable on any
+  picture. `-1` is a full white veil, `0` is no veil, `+1` is a full black veil.
+  Past a dark threshold, the card text automatically switches to a light colour.
+- New **Background** section in the visual editor, translated in Italian,
+  English and German.
+- **Add event/task button**: a new header button (toggle: `show_add_event`)
+  opens an inline form to create calendar events and todo tasks without
+  leaving the card. Pick the type (event or task), the target calendar or
+  list, title, and:
+  - for events: all-day toggle, start/end, optional location and description
+  - for tasks: optional due date and description
+- New **Localization** section labels and full translations for the form in
+  Italian, English and German.
+
+### Notes
+
+- Background image and transparency are mutually exclusive: if an image is
+  set, it takes precedence and transparency is ignored.
+- Transparency is applied both as CSS and as inline `!important` styles,
+  including theme variables, so it also works with "glass" themes and card-mod
+  which would otherwise re-inject their own background.
+- The weather widget band becomes transparent over a background image, so it
+  doesn't show as a grey rectangle on top of the picture.
+- These background options use the same names as in
+  [sun-weather-card](https://github.com/korova-sq/sun-weather-card), so both
+  cards are configured the same way.
+- The add button uses the official `calendar.create_event` and `todo.add_item`
+  services (not Home Assistant's internal event-editor dialog, which isn't
+  reliably reachable from an external card). Creating events only works for
+  calendars that support it (e.g. Local Calendar, CalDAV) — read-only
+  calendars won't accept new events.
+- Recurring events aren't supported: the underlying service doesn't offer it.
+  Create recurring events from the Calendar tab as usual.
+- The form opens as an overlay above the whole dashboard (not confined to the
+  card), so it displays fully and scrolls correctly even on short cards or
+  small screens.
+- All options default to off, so existing setups look exactly as before.
+
+### Credits
+
+- Background options requested by NavNav on the Home Assistant community
+  forum. Thanks!
+- Add event/task button requested by MasterTim17 (issue #5). Thanks!
+
+[1.7.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.7.0
+
 ## [1.6.0] - 2026-XX-XX
 
 ### Added

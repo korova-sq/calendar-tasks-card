@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.6.0
+ * calendar-tasks-card v1.7.0
  */
 
-const CARD_VERSION = "1.6.0";
+const CARD_VERSION = "1.7.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -31,6 +31,7 @@ const DEFAULT_CONFIG = {
   title: "Agenda",
   show_title: true,
   show_refresh: true,
+  show_add_event: false,          // mostra un pulsante nell'header che apre il dialog nativo di HA per creare un evento
   days: 7,
   show_end_time: false,
   show_empty_days: false,
@@ -58,6 +59,15 @@ const DEFAULT_CONFIG = {
   show_weather_today: true,       // mostra widget meteo dettagliato in alto (solo oggi)
   show_weather_per_day: false,    // mostra meteo (icona + temp) sotto la data di ogni giorno
   multi_day_events: true,         // mostra gli eventi multi-giorno in tutti i giorni che coprono
+  // Sfondo: 'transparent' rimuove sfondo, ombra e bordo (la card si fonde con la
+  // dashboard). 'background_image' imposta un'immagine (URL o percorso /local/...).
+  // Con l'immagine, un velo regolabile preserva la leggibilità del testo.
+  // Stessi nomi di opzione della sun-weather-card, per coerenza tra le due card.
+  transparent: false,
+  background_image: null,
+  // velo sopra l'immagine: valore unico da -1 a +1
+  //  -1 = chiaro pieno, 0 = nessun velo, +1 = scuro pieno
+  background_overlay: 0,
   exclude: [],                    // lista di keyword: gli eventi/task con titolo che le contiene vengono nascosti
   entity_colors: {},
   tap_action: DEFAULT_ACTION,
@@ -82,6 +92,81 @@ const STYLES = `
     --ctc-bar-overdue: var(--ctc-dot-overdue, #d93025);
   }
   ha-card { padding: 0; overflow: hidden; }
+
+  /* ─── Sfondo trasparente: via sfondo, ombra e bordo ─── */
+  ha-card.ctc-transparent {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    /* i temi "glass" (es. Frosted Glass) usano backdrop-filter e variabili proprie */
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    --ha-card-background: transparent;
+    --ha-card-box-shadow: none;
+    --ha-card-border-width: 0;
+    --ha-card-backdrop-filter: none;
+    --card-background-color: transparent;
+  }
+  /* i temi "glass" disegnano spesso il vetro con uno pseudo-elemento sopra la
+     card: va neutralizzato anche quello, altrimenti resta visibile */
+  ha-card.ctc-transparent::before,
+  ha-card.ctc-transparent::after {
+    content: none !important;
+    display: none !important;
+    background: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ─── Immagine di sfondo ─── */
+  /* Dipinta sulla card stessa (nessun wrapper, che spunterebbe agli angoli).
+     Il velo è incorporato nel background come primo layer del gradiente. */
+  ha-card.ctc-has-bg-image {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: none !important;
+    --ha-card-border-width: 0;
+    overflow: hidden;
+  }
+  /* La fascia grigia del widget meteo e i separatori stonano sopra
+     un'immagine: li rendiamo trasparenti e più discreti. */
+  ha-card.ctc-has-bg-image .ctc-weather-today,
+  ha-card.ctc-transparent .ctc-weather-today {
+    background: transparent !important;
+  }
+  ha-card.ctc-has-bg-image .ctc-day-row + .ctc-day-row {
+    border-top-color: rgba(128, 128, 128, 0.35);
+  }
+  /* Su velo scuro schiarisce i testi, che di default seguono il tema chiaro */
+  ha-card.ctc-bg-dark .ctc-title,
+  ha-card.ctc-bg-dark .ctc-date-wd,
+  ha-card.ctc-bg-dark .ctc-date-num,
+  ha-card.ctc-bg-dark .ctc-date-month,
+  ha-card.ctc-bg-dark .ctc-event-title,
+  ha-card.ctc-bg-dark .ctc-event-time,
+  ha-card.ctc-bg-dark .ctc-event-relative,
+  ha-card.ctc-bg-dark .ctc-event-desc,
+  ha-card.ctc-bg-dark .ctc-event-location,
+  ha-card.ctc-bg-dark .ctc-section-title,
+  ha-card.ctc-bg-dark .ctc-empty,
+  ha-card.ctc-bg-dark .ctc-empty-day,
+  ha-card.ctc-bg-dark .ctc-week-banner,
+  ha-card.ctc-bg-dark .ctc-day-counter,
+  ha-card.ctc-bg-dark .ctc-weather-day,
+  ha-card.ctc-bg-dark .ctc-weather-today-temp,
+  ha-card.ctc-bg-dark .ctc-weather-today-details,
+  ha-card.ctc-bg-dark .ctc-wt-condition {
+    color: #f3f3f3;
+  }
+  ha-card.ctc-bg-dark .ctc-weather-today-icon,
+  ha-card.ctc-bg-dark .ctc-weather-day-icon,
+  ha-card.ctc-bg-dark .ctc-header ha-icon {
+    color: #f3f3f3;
+  }
 
   .ctc-header {
     display: flex;
@@ -475,6 +560,126 @@ const STYLES = `
   .ctc-compact .ctc-weather-today { padding: 6px 16px; }
   .ctc-compact .ctc-weather-today-icon { --mdc-icon-size: 30px; }
 
+
+`;
+
+/* ─── Stili del form Aggiungi (usati sia in shadow DOM sia iniettati nel body) ─── */
+const ADD_FORM_STYLES = `
+  /* ─── Form "Aggiungi evento/task" (overlay dentro la card) ─── */
+  .ctc-add-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  .ctc-add-panel {
+    background: var(--card-background-color, #fff);
+    color: var(--primary-text-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    width: 100%;
+    max-width: 340px;
+    /* vh come fallback per browser meno recenti; dvh (altezza dinamica del
+       viewport) corregge il calcolo su mobile quando la barra degli indirizzi
+       si nasconde/mostra — evita che il pannello risulti più alto dello
+       schermo realmente visibile senza modo di scrollare fino in fondo. */
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  .ctc-add-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .ctc-add-typetoggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .ctc-add-typebtn {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--divider-color, #ccc);
+    background: transparent;
+    color: var(--primary-text-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .ctc-add-typebtn.active {
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    border-color: var(--primary-color, #03a9f4);
+  }
+  .ctc-add-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .ctc-add-field label {
+    font-size: 13px;
+    color: var(--secondary-text-color);
+  }
+  .ctc-add-field.ctc-add-inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .ctc-add-field.ctc-add-inline label { order: 2; }
+  .ctc-add-check { width: 18px; height: 18px; }
+  .ctc-add-fields .ctc-native-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid var(--divider-color, #ccc);
+    border-radius: 8px;
+    background: var(--card-background-color, #fff);
+    color: var(--primary-text-color);
+    font-size: 14px;
+  }
+  .ctc-add-textarea {
+    resize: vertical;
+    font-family: inherit;
+    min-height: 38px;
+  }
+  .ctc-add-error {
+    color: var(--error-color, #db4437);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .ctc-add-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .ctc-add-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .ctc-add-cancel {
+    background: transparent;
+    color: var(--primary-text-color);
+    border: 1px solid var(--divider-color, #ccc);
+  }
+  .ctc-add-save {
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+  }
+  .ctc-add-save:disabled { opacity: 0.6; cursor: default; }
 `;
 
 /* ─── Stili editor ──────────────────────────────────────────────── */
@@ -498,6 +703,12 @@ const EDITOR_STYLES = `
   .ctc-native-input:focus { border-color: var(--accent-color, #4285f4); }
   .ctc-native-input.wide { width: 160px; }
   .ctc-native-input.narrow { width: 70px; }
+  /* Variante impilata: etichetta sopra e campo a tutta larghezza. Serve per i
+     valori lunghi (es. percorsi immagine) che nei 160px dei campi affiancati
+     risulterebbero illeggibili. */
+  .field-row.stacked { flex-direction: column; align-items: stretch; gap: 4px; }
+  .field-row.stacked label { flex: none; }
+  .field-row.stacked .ctc-native-input { width: 100%; box-sizing: border-box; }
   .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .toggle-row:last-child { margin-bottom: 0; }
   .toggle-row label { font-size: 14px; color: var(--primary-text-color); }
@@ -616,6 +827,38 @@ const EDITOR_STYLES = `
     border-bottom: 1px solid var(--divider-color);
   }
   .sub-title:first-child { margin-top: 0; }
+
+  /* Slider del velo sfondo: barra con gradiente bianco→nero che mostra
+     visivamente cosa fa il cursore (a sinistra schiarisce, a destra scurisce) */
+  input[type="range"].ctc-overlay-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--divider-color, #ccc);
+    background: linear-gradient(to right, #ffffff, #d9d9d9 50%, #000000);
+    cursor: pointer;
+  }
+  input[type="range"].ctc-overlay-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color, #03a9f4);
+    border: 2px solid #fff;
+    box-shadow: 0 0 2px rgba(0,0,0,0.4);
+  }
+  input[type="range"].ctc-overlay-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color, #03a9f4);
+    border: 2px solid #fff;
+  }
 `;
 
 /* ─── Helper meteo ──────────────────────────────────────────────── */
@@ -913,12 +1156,40 @@ const I18N = {
     ed_max_events_visible: "Numero massimo eventi visibili",
     ed_show_title: "Mostra titolo",
     ed_show_refresh: "Mostra pulsante refresh",
+    ed_show_add_event: "Mostra pulsante aggiungi evento",
+    add_event: "Aggiungi evento",
+    add_type_event: "Evento",
+    add_type_task: "Task",
+    add_calendar: "Calendario",
+    add_list: "Lista",
+    add_summary: "Titolo",
+    add_title_ph: "Titolo",
+    add_all_day: "Tutto il giorno",
+    add_start: "Inizio",
+    add_end: "Fine",
+    add_due: "Scadenza (opzionale)",
+    add_description: "Descrizione (opzionale)",
+    add_location: "Luogo (opzionale)",
+    add_saving: "Salvataggio…",
+    add_cancel: "Annulla",
+    add_save: "Salva",
+    add_err_title: "Inserisci un titolo",
+    add_err_dates: "Inserisci data di inizio e fine",
+    add_err_endbefore: "La fine deve essere dopo l'inizio",
+    add_err_generic: "Errore durante il salvataggio",
     ed_show_collapse: "Mostra pulsante collassa",
     ed_limit_events: "Limita eventi visibili (attiva scrollbar)",
     ed_compact_mode: "Modalità compatta (spazi ridotti)",
     ed_show_week_number: "Mostra numero settimana",
     ed_show_end_time: "Mostra orario di fine",
     ed_multi_day_events: "Mostra eventi multi-giorno in tutti i giorni",
+    ed_background: "Sfondo",
+    ed_transparent: "Sfondo trasparente",
+    ed_background_image: "Immagine di sfondo (URL o percorso /local/…)",
+    ed_overlay: "Velo: più chiaro ⟵ niente ⟶ più scuro",
+    ed_ov_lighter: "Chiaro",
+    ed_ov_zero: "0",
+    ed_ov_darker: "Scuro",
     ed_show_empty_days: "Mostra giorni vuoti",
     ed_show_relative_time: "Mostra tempo relativo (tra X giorni)",
     ed_show_source: "Mostra origine (calendario/lista)",
@@ -995,12 +1266,40 @@ const I18N = {
     ed_max_events_visible: "Max events visible",
     ed_show_title: "Show title",
     ed_show_refresh: "Show refresh button",
+    ed_show_add_event: "Show add event button",
+    add_event: "Add event",
+    add_type_event: "Event",
+    add_type_task: "Task",
+    add_calendar: "Calendar",
+    add_list: "List",
+    add_summary: "Title",
+    add_title_ph: "Title",
+    add_all_day: "All day",
+    add_start: "Start",
+    add_end: "End",
+    add_due: "Due date (optional)",
+    add_description: "Description (optional)",
+    add_location: "Location (optional)",
+    add_saving: "Saving…",
+    add_cancel: "Cancel",
+    add_save: "Save",
+    add_err_title: "Please enter a title",
+    add_err_dates: "Please enter start and end dates",
+    add_err_endbefore: "End must be after start",
+    add_err_generic: "Error while saving",
     ed_show_collapse: "Show collapse button",
     ed_limit_events: "Limit visible events (enable scrollbar)",
     ed_compact_mode: "Compact mode (reduced spacing)",
     ed_show_week_number: "Show week number",
     ed_show_end_time: "Show end time",
     ed_multi_day_events: "Show multi-day events on every day",
+    ed_background: "Background",
+    ed_transparent: "Transparent background",
+    ed_background_image: "Background image (URL or /local/… path)",
+    ed_overlay: "Overlay: lighter ⟵ none ⟶ darker",
+    ed_ov_lighter: "Lighter",
+    ed_ov_zero: "0",
+    ed_ov_darker: "Darker",
     ed_show_empty_days: "Show empty days",
     ed_show_relative_time: "Show relative time (in X days)",
     ed_show_source: "Show source (calendar/list)",
@@ -1078,12 +1377,40 @@ const I18N = {
     ed_max_events_visible: "Max Ereignisse",
     ed_show_title: "Titel anzeigen",
     ed_show_refresh: "Neu laden anzeigen",
+    ed_show_add_event: "Ereignis-Button anzeigen",
+    add_event: "Ereignis hinzufügen",
+    add_type_event: "Ereignis",
+    add_type_task: "Aufgabe",
+    add_calendar: "Kalender",
+    add_list: "Liste",
+    add_summary: "Titel",
+    add_title_ph: "Titel",
+    add_all_day: "Ganztägig",
+    add_start: "Beginn",
+    add_end: "Ende",
+    add_due: "Fällig (optional)",
+    add_description: "Beschreibung (optional)",
+    add_location: "Ort (optional)",
+    add_saving: "Speichern…",
+    add_cancel: "Abbrechen",
+    add_save: "Speichern",
+    add_err_title: "Bitte einen Titel eingeben",
+    add_err_dates: "Bitte Start- und Enddatum eingeben",
+    add_err_endbefore: "Ende muss nach dem Beginn liegen",
+    add_err_generic: "Fehler beim Speichern",
     ed_show_collapse: "Zeige Einklapp-Button",
     ed_limit_events: "Ereignisanzeige begrenzen (Scrollbar)",
     ed_compact_mode: "Kompaktmodus (kleinere Abstände)",
     ed_show_week_number: "Zeige Kalenderwoche",
     ed_show_end_time: "Zeige Endzeit",
     ed_multi_day_events: "Mehrtägige Ereignisse an allen Tagen zeigen",
+    ed_background: "Hintergrund",
+    ed_transparent: "Transparenter Hintergrund",
+    ed_background_image: "Hintergrundbild (URL oder /local/…-Pfad)",
+    ed_overlay: "Überlagerung: heller ⟵ keine ⟶ dunkler",
+    ed_ov_lighter: "Heller",
+    ed_ov_zero: "0",
+    ed_ov_darker: "Dunkler",
     ed_show_empty_days: "Zeige leere Tage",
     ed_show_relative_time: "Zeige relative Zeit (in X Tagen)",
     ed_show_source: "Zeige Quelle",
@@ -1654,6 +1981,367 @@ class CalendarTasksCard extends HTMLElement {
     return results;
   }
 
+  /* Apre un form inline (dentro la card) per creare un evento o un task.
+     Non usiamo il dialog nativo di HA: una card esterna non può aprirlo in modo
+     affidabile (il percorso interno del dialog non è accessibile). Usiamo invece
+     i servizi ufficiali di HA, stabili e documentati:
+       - eventi calendario → calendar.create_event
+       - task todo         → todo.add_item
+     Il form resta dentro la card, così si possono aggiungere più elementi di
+     seguito senza cambiare pagina. */
+  _openAddEventDialog() {
+    if (!this._cardElement) return;
+    const calendars = (this._config.calendars || []).filter(isValidEntityId);
+    const todos = (this._config.todos || []).filter(isValidEntityId);
+    if (calendars.length === 0 && todos.length === 0) return;
+
+    // Se un form è già aperto, non ne apro un secondo.
+    // L'overlay vive sul document.body (vedi sotto), quindi lo cerco lì.
+    if (document.getElementById("ctc-add-overlay")) return;
+    // Inietto gli stili del form nel <head> una volta sola: l'overlay sta fuori
+    // dalla shadow DOM della card, quindi non erediterebbe gli stili interni.
+    if (!document.getElementById("ctc-add-form-styles")) {
+      const st = document.createElement("style");
+      st.id = "ctc-add-form-styles";
+      st.textContent = ADD_FORM_STYLES;
+      document.head.appendChild(st);
+    }
+
+    const lang = this._resolveLang ? this._resolveLang() : "en";
+
+    // Overlay + pannello del form
+    const overlay = document.createElement("div");
+    overlay.id = "ctc-add-overlay";
+    overlay.className = "ctc-add-overlay";
+    // Posizionamento rinforzato inline: alcuni contenitori della dashboard HA
+    // usano `transform`, che "intrappola" un position:fixed facendolo diventare
+    // relativo al contenitore invece che allo schermo. Ancorare esplicitamente a
+    // 0/0 rende il form sempre centrato e interamente visibile, a prescindere
+    // dall'altezza della card. NB: niente width/height:100vw/100vh qui — su
+    // mobile (Safari in particolare) 100vh include l'area dietro la barra degli
+    // indirizzi, quindi il pannello risulterebbe "dentro" ai 100vh sulla carta
+    // ma tagliato nello schermo visibile reale, senza scroll a raggiungerlo.
+    // top/right/bottom/left:0 su un elemento fixed si adatta invece al
+    // viewport realmente visibile.
+    overlay.style.cssText =
+      "position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;";
+
+    const panel = document.createElement("div");
+    panel.className = "ctc-add-panel";
+    overlay.appendChild(panel);
+
+    // Titolo del form
+    const h = document.createElement("div");
+    h.className = "ctc-add-title";
+    h.textContent = t("add_event", lang);
+    panel.appendChild(h);
+
+    // Scelta tipo: Evento / Task (solo se ha sia calendari che todo)
+    let currentType = calendars.length > 0 ? "event" : "task";
+    let typeToggle = null;
+    if (calendars.length > 0 && todos.length > 0) {
+      typeToggle = document.createElement("div");
+      typeToggle.className = "ctc-add-typetoggle";
+      const mkTypeBtn = (val, label) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ctc-add-typebtn" + (val === currentType ? " active" : "");
+        b.textContent = label;
+        b.addEventListener("click", () => {
+          currentType = val;
+          typeToggle.querySelectorAll(".ctc-add-typebtn").forEach(x => x.classList.remove("active"));
+          b.classList.add("active");
+          rebuildFields();
+        });
+        return b;
+      };
+      typeToggle.append(
+        mkTypeBtn("event", t("add_type_event", lang)),
+        mkTypeBtn("task", t("add_type_task", lang)),
+      );
+      panel.appendChild(typeToggle);
+    }
+
+    // Contenitore dei campi (ricostruito quando cambia il tipo)
+    const fields = document.createElement("div");
+    fields.className = "ctc-add-fields";
+    panel.appendChild(fields);
+
+    // Helper per una riga label + input
+    const mkField = (labelText, inputEl) => {
+      const row = document.createElement("div");
+      row.className = "ctc-add-field";
+      const l = document.createElement("label");
+      l.textContent = labelText;
+      row.append(l, inputEl);
+      return row;
+    };
+
+    // Formatta una Date in valore per <input type=datetime-local> (ora locale)
+    const toLocalInput = (d) => {
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    const toDateInput = (d) => {
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    };
+
+    // Riferimenti agli input, popolati da rebuildFields
+    let inpTarget, inpTitle, inpStart, inpEnd, inpAllDay, inpDue, inpDesc, inpLoc, errBox;
+
+    const rebuildFields = () => {
+      fields.innerHTML = "";
+
+      // Selettore calendario/lista
+      inpTarget = document.createElement("select");
+      inpTarget.className = "ctc-native-input wide";
+      const list = currentType === "event" ? calendars : todos;
+      list.forEach(entId => {
+        const opt = document.createElement("option");
+        opt.value = entId;
+        // Nome leggibile dall'entità, se disponibile
+        const friendly = this._hass?.states?.[entId]?.attributes?.friendly_name;
+        opt.textContent = friendly || entId;
+        inpTarget.appendChild(opt);
+      });
+      fields.appendChild(mkField(
+        currentType === "event" ? t("add_calendar", lang) : t("add_list", lang),
+        inpTarget,
+      ));
+
+      // Titolo
+      inpTitle = document.createElement("input");
+      inpTitle.type = "text";
+      inpTitle.className = "ctc-native-input wide";
+      inpTitle.placeholder = t("add_title_ph", lang);
+      blockHAShortcuts(inpTitle);
+      fields.appendChild(mkField(t("add_summary", lang), inpTitle));
+
+      if (currentType === "event") {
+        // Tutto il giorno
+        inpAllDay = document.createElement("input");
+        inpAllDay.type = "checkbox";
+        inpAllDay.className = "ctc-add-check";
+        const allDayRow = mkField(t("add_all_day", lang), inpAllDay);
+        allDayRow.classList.add("ctc-add-inline");
+        fields.appendChild(allDayRow);
+
+        const now = new Date();
+        const inOneHour = new Date(now.getTime() + 3600000);
+
+        // Inizio / Fine
+        inpStart = document.createElement("input");
+        inpStart.type = "datetime-local";
+        inpStart.className = "ctc-native-input wide";
+        inpStart.value = toLocalInput(now);
+        blockHAShortcuts(inpStart);
+        const startRow = mkField(t("add_start", lang), inpStart);
+        fields.appendChild(startRow);
+
+        inpEnd = document.createElement("input");
+        inpEnd.type = "datetime-local";
+        inpEnd.className = "ctc-native-input wide";
+        inpEnd.value = toLocalInput(inOneHour);
+        blockHAShortcuts(inpEnd);
+        const endRow = mkField(t("add_end", lang), inpEnd);
+        fields.appendChild(endRow);
+
+        // Quando "tutto il giorno" è attivo, gli input diventano solo-data
+        inpAllDay.addEventListener("change", () => {
+          const allDay = inpAllDay.checked;
+          inpStart.type = allDay ? "date" : "datetime-local";
+          inpEnd.type = allDay ? "date" : "datetime-local";
+          inpStart.value = allDay ? toDateInput(now) : toLocalInput(now);
+          inpEnd.value = allDay ? toDateInput(now) : toLocalInput(inOneHour);
+        });
+
+        // Luogo (opzionale)
+        inpLoc = document.createElement("input");
+        inpLoc.type = "text";
+        inpLoc.className = "ctc-native-input wide";
+        blockHAShortcuts(inpLoc);
+        fields.appendChild(mkField(t("add_location", lang), inpLoc));
+
+        // Descrizione (opzionale)
+        inpDesc = document.createElement("textarea");
+        inpDesc.className = "ctc-native-input wide ctc-add-textarea";
+        inpDesc.rows = 2;
+        blockHAShortcuts(inpDesc);
+        fields.appendChild(mkField(t("add_description", lang), inpDesc));
+      } else {
+        // Task: data di scadenza opzionale
+        inpDue = document.createElement("input");
+        inpDue.type = "date";
+        inpDue.className = "ctc-native-input wide";
+        blockHAShortcuts(inpDue);
+        fields.appendChild(mkField(t("add_due", lang), inpDue));
+
+        // Descrizione task (opzionale) — todo.add_item accetta description
+        inpDesc = document.createElement("textarea");
+        inpDesc.className = "ctc-native-input wide ctc-add-textarea";
+        inpDesc.rows = 2;
+        blockHAShortcuts(inpDesc);
+        fields.appendChild(mkField(t("add_description", lang), inpDesc));
+      }
+
+      // Box errore (nascosto finché non serve)
+      errBox = document.createElement("div");
+      errBox.className = "ctc-add-error";
+      errBox.style.display = "none";
+      fields.appendChild(errBox);
+    };
+    rebuildFields();
+
+    // Pulsanti Annulla / Salva
+    const actions = document.createElement("div");
+    actions.className = "ctc-add-actions";
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "ctc-add-btn ctc-add-cancel";
+    btnCancel.textContent = t("add_cancel", lang);
+    const btnSave = document.createElement("button");
+    btnSave.type = "button";
+    btnSave.className = "ctc-add-btn ctc-add-save";
+    btnSave.textContent = t("add_save", lang);
+    actions.append(btnCancel, btnSave);
+    panel.appendChild(actions);
+
+    const close = () => overlay.remove();
+    btnCancel.addEventListener("click", close);
+    // Click fuori dal pannello chiude
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+    const showErr = (msg) => {
+      errBox.textContent = msg;
+      errBox.style.display = "block";
+    };
+
+    btnSave.addEventListener("click", async () => {
+      if (!this._hass) return;
+      const target = inpTarget.value;
+      const title = (inpTitle.value || "").trim();
+      if (!title) { showErr(t("add_err_title", lang)); return; }
+
+      // Indicatore di salvataggio: testo del pulsante + disabilitazione.
+      // Utile perché i backend CalDAV possono metterci un paio di secondi.
+      const savingLabel = t("add_saving", lang);
+      const savedLabel = t("add_save", lang);
+      btnSave.disabled = true;
+      btnSave.textContent = savingLabel;
+      const restoreBtn = () => { btnSave.disabled = false; btnSave.textContent = savedLabel; };
+      try {
+        if (currentType === "event") {
+          const allDay = inpAllDay.checked;
+          const data = { entity_id: target, summary: title };
+          if (allDay) {
+            // Servizio HA: per all-day si usano start_date / end_date (date pure).
+            // end_date è ESCLUSIVO: un evento di un giorno ha end = start + 1.
+            const s = inpStart.value; // YYYY-MM-DD
+            const e = inpEnd.value || s;
+            const endD = new Date(e + "T00:00:00");
+            endD.setDate(endD.getDate() + 1);
+            const p = (n) => String(n).padStart(2, "0");
+            const endStr = `${endD.getFullYear()}-${p(endD.getMonth() + 1)}-${p(endD.getDate())}`;
+            data.start_date = s;
+            data.end_date = endStr;
+          } else {
+            if (!inpStart.value || !inpEnd.value) { showErr(t("add_err_dates", lang)); restoreBtn(); return; }
+            if (new Date(inpEnd.value) <= new Date(inpStart.value)) { showErr(t("add_err_endbefore", lang)); restoreBtn(); return; }
+            // datetime-local non ha secondi: li aggiungiamo per il servizio
+            data.start_date_time = inpStart.value + ":00";
+            data.end_date_time = inpEnd.value + ":00";
+          }
+          // Luogo e descrizione opzionali
+          const loc = (inpLoc?.value || "").trim();
+          const desc = (inpDesc?.value || "").trim();
+          if (loc) data.location = loc;
+          if (desc) data.description = desc;
+          await this._hass.callService("calendar", "create_event", data);
+        } else {
+          // Task
+          const data = { entity_id: target, item: title };
+          if (inpDue && inpDue.value) data.due_date = inpDue.value;
+          const desc = (inpDesc?.value || "").trim();
+          if (desc) data.description = desc;
+          await this._hass.callService("todo", "add_item", data);
+        }
+        close();
+        this._fetchAll(true);
+      } catch (err) {
+        showErr(t("add_err_generic", lang) + (err?.message ? `: ${err.message}` : ""));
+        restoreBtn();
+      }
+    });
+
+    // Attacco l'overlay al BODY della pagina, non alla card: così il
+    // position:fixed è relativo allo schermo e non viene "intrappolato" dai
+    // contenitori della dashboard HA che usano transform (che facevano restare
+    // il form dentro la card corta). Il form appare centrato e intero.
+    document.body.appendChild(overlay);
+    // Focus sul titolo per digitare subito
+    setTimeout(() => { try { inpTitle.focus(); } catch (e) {} }, 50);
+  }
+
+  /* Applica sfondo trasparente o immagine di sfondo alla ha-card.
+     Logica identica alla sun-weather-card, per coerenza tra le due card.
+     Immagine e trasparenza sono mutuamente esclusive: se c'è un'immagine,
+     ha la precedenza e la trasparenza viene ignorata. */
+  _applyBackground(cardEl) {
+    if (!cardEl) return;
+    const bg = this._config.background_image;
+    const hasBg = !!(bg && String(bg).trim());
+
+    // Sfondo trasparente (solo se non c'è un'immagine)
+    const wantTransparent = this._config.transparent === true && !hasBg;
+    cardEl.classList.toggle("ctc-transparent", wantTransparent);
+
+    // La trasparenza va applicata ANCHE come stile inline con !important:
+    // gli stili inline battono qualsiasi foglio di stile, compresi i temi
+    // "glass" che iniettano regole nella card (es. via card-mod). Senza questo
+    // lo sfondo del tema resterebbe visibile e l'opzione sembrerebbe non funzionare.
+    const forced = [
+      ["background", "transparent"],
+      ["background-color", "transparent"],
+      ["background-image", "none"],
+      ["box-shadow", "none"],
+      ["border", "none"],
+      ["backdrop-filter", "none"],
+      ["-webkit-backdrop-filter", "none"],
+      // variabili dei temi: ereditano anche dentro la shadow DOM di ha-card
+      ["--ha-card-background", "transparent"],
+      ["--card-background-color", "transparent"],
+      ["--ha-card-box-shadow", "none"],
+      ["--ha-card-border-width", "0"],
+      ["--ha-card-border-color", "transparent"],
+      ["--ha-card-backdrop-filter", "none"],
+    ];
+    if (wantTransparent) {
+      forced.forEach(([p, v]) => cardEl.style.setProperty(p, v, "important"));
+    } else {
+      forced.forEach(([p]) => cardEl.style.removeProperty(p));
+    }
+
+    // Immagine di sfondo con velo incorporato, dipinta sulla card stessa
+    if (hasBg) {
+      cardEl.classList.add("ctc-has-bg-image");
+      // Velo unico: da -1 (chiaro) a +1 (scuro), 0 = nessun velo
+      let ov = Number(this._config.background_overlay);
+      if (!isFinite(ov)) ov = 0;
+      ov = Math.min(Math.max(ov, -1), 1);
+      const dark = ov > 0;
+      const op = Math.abs(ov);
+      const veil = dark ? `rgba(0, 0, 0, ${op})` : `rgba(255, 255, 255, ${op})`;
+      const bgUrl = String(bg).trim();
+      cardEl.style.backgroundImage = `linear-gradient(${veil}, ${veil}), url("${bgUrl}")`;
+      // Oltre una certa soglia di velo scuro, i testi vanno schiariti
+      cardEl.classList.toggle("ctc-bg-dark", dark && op >= 0.4);
+    } else {
+      cardEl.classList.remove("ctc-has-bg-image", "ctc-bg-dark");
+      cardEl.style.backgroundImage = "";
+    }
+  }
+
   /* Applica i filtri configurati ai dati grezzi e popola _events/_tasks.
      Filtro `exclude`: nasconde eventi/task con titolo che contiene una delle keyword.
      Match case-insensitive e parziale (sub-string). Una keyword vuota viene
@@ -1782,6 +2470,15 @@ class CalendarTasksCard extends HTMLElement {
     const showRefreshBtn = this._config.show_refresh !== false;
     const showCollapseBtn = !!this._config.show_collapse_button;
     let headerActions = "";
+    // Pulsante "Aggiungi": apre un form inline per creare un evento o un task.
+    // Mostrato solo se attivato E se c'è almeno un calendario o una lista todo
+    // (senza nessuno dei due non avrebbe dove creare).
+    const showAddEvent = this._config.show_add_event === true
+      && ((this._config.calendars || []).filter(isValidEntityId).length > 0
+        || (this._config.todos || []).filter(isValidEntityId).length > 0);
+    if (showAddEvent) {
+      headerActions += `<button class="ctc-header-btn" id="ctc-add-event" title="${t("add_event", lang)}"><ha-icon icon="mdi:calendar-plus"></ha-icon></button>`;
+    }
     if (showRefreshBtn) {
       headerActions += `<button class="ctc-header-btn" id="ctc-refresh" title="${t("refresh", lang)}"><ha-icon icon="mdi:refresh"></ha-icon></button>`;
     }
@@ -1816,6 +2513,9 @@ class CalendarTasksCard extends HTMLElement {
     const cardElement = card;
     card = body;
     this._cardElement = cardElement;
+    // Sfondo trasparente / immagine di sfondo (applicato prima del contenuto,
+    // così vale anche nello stato di caricamento e quando la card è collassata)
+    this._applyBackground(cardElement);
 
     if (this._loading) {
       card.innerHTML += `<div class="ctc-loading"><ha-circular-progress active size="small"></ha-circular-progress></div>`;
@@ -2273,6 +2973,20 @@ class CalendarTasksCard extends HTMLElement {
       refreshBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fetchAll(true); });
       refreshBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
       refreshBtn.addEventListener("pointerup", (e) => e.stopPropagation());
+    }
+
+    // Pulsante "Aggiungi evento": apre il dialog nativo di HA (lo stesso della
+    // tab Calendario). Non reimplementiamo nulla: lanciamo l'evento show-dialog
+    // con il tag del dialog e i parametri. HA gestisce form, calendari
+    // selezionabili, validazione e salvataggio. La card si aggiorna al refresh.
+    const addEventBtn = shadow.getElementById("ctc-add-event");
+    if (addEventBtn) {
+      addEventBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+      addEventBtn.addEventListener("pointerup", (e) => e.stopPropagation());
+      addEventBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._openAddEventDialog();
+      });
     }
 
     // Pulsante "Comprimi tutto / Espandi tutto" nel banner della prima settimana
@@ -2948,6 +3662,8 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       body.appendChild(this._makeToggle(t("ed_show_refresh", lang), this._config.show_refresh !== false,
         v => { this._config.show_refresh = v; this._fire(); }));
+      body.appendChild(this._makeToggle(t("ed_show_add_event", lang), this._config.show_add_event === true,
+        v => { this._config.show_add_event = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_collapse", lang), this._config.show_collapse_button !== false,
         v => { this._config.show_collapse_button = v; this._fire(); }));
 
@@ -3046,6 +3762,75 @@ class CalendarTasksCardEditor extends HTMLElement {
         v => { this._config.show_location = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_location_clickable", lang), !!this._config.location_clickable,
         v => { this._config.location_clickable = v; this._fire(); }));
+
+      root.appendChild(wrapper);
+    }
+
+    // ── Background ──
+    {
+      const { wrapper, body } = this._makeCollapsible("background", t("ed_background", lang), false, "mdi:image-outline");
+
+      // Toggle sfondo trasparente
+      body.appendChild(this._makeToggle(t("ed_transparent", lang), this._config.transparent === true,
+        v => { this._config.transparent = v; this._fire(); }));
+
+      // Campo immagine di sfondo
+      const rowImg = document.createElement("div");
+      rowImg.className = "field-row stacked";
+      const lblImg = document.createElement("label");
+      lblImg.textContent = t("ed_background_image", lang);
+      const inpImg = this._makeInput("inp-bg-image", "text", this._config.background_image || "", "wide",
+        v => { this._config.background_image = v.trim() || null; this._fire(); });
+      inpImg.placeholder = "/local/bg.jpg";
+      rowImg.append(lblImg, inpImg);
+      body.appendChild(rowImg);
+
+      // Slider del velo: da -1 (chiaro) a +1 (scuro), con tacca centrale sullo 0
+      const ovWrap = document.createElement("div");
+      ovWrap.style.cssText = "margin-top: 8px;";
+
+      const ovLabel = document.createElement("div");
+      ovLabel.style.cssText = "font-size: 13px; color: var(--ctc-text); margin-bottom: 6px;";
+      ovLabel.textContent = t("ed_overlay", lang);
+
+      const ovSliderWrap = document.createElement("div");
+      ovSliderWrap.style.cssText = "position: relative; display: flex; align-items: center;";
+
+      // Tacca verticale al centro, per trovare facilmente lo zero
+      const ovTick = document.createElement("span");
+      ovTick.style.cssText = `
+        position: absolute; left: 50%; top: 50%;
+        width: 2px; height: 16px; transform: translate(-50%, -50%);
+        background: var(--ctc-text); opacity: 0.55;
+        border-radius: 1px; pointer-events: none; z-index: 2;
+      `;
+
+      const ovInput = document.createElement("input");
+      ovInput.type = "range";
+      ovInput.min = "-1";
+      ovInput.max = "1";
+      ovInput.step = "0.05";
+      ovInput.value = this._config.background_overlay ?? 0;
+      ovInput.className = "ctc-overlay-slider";
+      blockHAShortcuts(ovInput);
+      ovInput.addEventListener("input", e => {
+        this._config.background_overlay = Number(e.target.value);
+        this._fire();
+      });
+
+      ovSliderWrap.append(ovTick, ovInput);
+
+      // Etichette sotto lo slider: chiaro · 0 · scuro
+      const ovScale = document.createElement("div");
+      ovScale.style.cssText = "display: flex; justify-content: space-between; font-size: 11px; color: var(--ctc-muted); margin-top: 2px;";
+      [t("ed_ov_lighter", lang), t("ed_ov_zero", lang), t("ed_ov_darker", lang)].forEach(txt => {
+        const s = document.createElement("span");
+        s.textContent = txt;
+        ovScale.appendChild(s);
+      });
+
+      ovWrap.append(ovLabel, ovSliderWrap, ovScale);
+      body.appendChild(ovWrap);
 
       root.appendChild(wrapper);
     }
