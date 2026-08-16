@@ -52,23 +52,20 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 </tr>
 </table>
 
-### Main view with overdue and completed
-![Main view](screenshots/01-overview.jpeg)
-
-### 🎨 Color picker in the editor
-![Editor with palette](screenshots/02-editor-colors.jpeg)
-
-### ⚙️ Editor sections
-![Editor sections](screenshots/03-editor-sections.jpeg)
-
-### 📆 Week numbers
-![Week numbers](screenshots/04-week-numbers.jpeg)
-
-### 📋 Clean agenda view
-![Agenda view](screenshots/05-agenda-view.jpeg)
-
-### ☀️ Weather support
-![Weather example](screenshots/weather-support.jpeg)
+<table>
+<tr>
+<td width="50%"><b>Main view with overdue and completed</b><br><img src="screenshots/01-overview.jpeg" width="100%"></td>
+<td width="50%"><b>🎨 Color picker in the editor</b><br><img src="screenshots/02-editor-colors.jpeg" width="100%"></td>
+</tr>
+<tr>
+<td width="50%"><b>⚙️ Editor sections</b><br><img src="screenshots/03-editor-sections.jpeg" width="100%"></td>
+<td width="50%"><b>📆 Week numbers</b><br><img src="screenshots/04-week-numbers.jpeg" width="100%"></td>
+</tr>
+<tr>
+<td width="50%"><b>📋 Clean agenda view</b><br><img src="screenshots/05-agenda-view.jpeg" width="100%"></td>
+<td width="50%"><b>☀️ Weather support</b><br><img src="screenshots/weather-support.jpeg" width="100%"></td>
+</tr>
+</table>
 
 Display weather information from any HA `weather.*` entity with two independent options:
 
