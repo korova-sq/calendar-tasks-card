@@ -63,7 +63,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 </tr>
 <tr>
 <td width="50%"><b>📋 Clean agenda view</b><br><img src="screenshots/05-agenda-view.jpeg" width="100%"></td>
-<td width="50%"><b>☀️ Weather support</b><br><img src="screenshots/weather-support.jpeg" width="100%"></td>
+<td width="50%"><b>☀️ Weather support</b><br><img src="screenshots/06-weather-support.jpeg" width="100%"></td>
 </tr>
 </table>
 
