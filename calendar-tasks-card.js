@@ -1417,6 +1417,8 @@ const I18N = {
     // ─── Editor UI ───
     ed_entities: "Entità",
     ed_calendars: "Calendari",
+    ed_add_calendar: "Aggiungi calendario",
+    ed_add_todo: "Aggiungi lista",
     ed_todo_lists: "Liste todo",
     ed_general: "Generale",
     ed_header: "Header",
@@ -1426,6 +1428,12 @@ const I18N = {
     ed_lang_label: "Lingua",
     ed_time_format: "Formato ora",
     ed_first_day: "Primo giorno della settimana",
+    opt_system_default: "Predefinito di sistema",
+    opt_24h: "24 ore (13:30)",
+    opt_12h: "12 ore (1:30 PM)",
+    opt_monday: "Lunedì",
+    opt_sunday: "Domenica",
+    opt_saturday: "Sabato",
     ed_display: "Visualizzazione",
     ed_weather: "Meteo",
     ed_tasks: "Task",
@@ -1489,9 +1497,21 @@ const I18N = {
     ed_show_weather_per_day: "Mostra meteo per giorno (accanto alla data)",
     ed_show_overdue: "Mostra task scaduti",
     ed_overdue_days: "Giorni scaduti da mostrare (0 = tutti)",
+    ed_completed_days: "Giorni completati da mostrare",
     ed_show_completed: "Mostra task completati",
     ed_allow_complete: "Consenti completamento task",
     ed_action: "Azione",
+    ed_act_none: "Nessuna",
+    ed_act_more_info: "Maggiori info",
+    ed_act_toggle: "Attiva/disattiva",
+    ed_act_navigate: "Naviga",
+    ed_act_url: "URL",
+    ed_act_call_service: "Chiama servizio",
+    ed_act_assist: "Assist",
+    ed_param_path: "Percorso",
+    ed_param_url: "URL",
+    ed_param_service: "Servizio",
+    ed_param_entity: "Entità (opzionale)",
     ed_data_json: "Dati (JSON)",
     ed_choose_color: "Scegli colore",
     ed_automatic: "Automatico",
@@ -1540,6 +1560,8 @@ const I18N = {
     // ─── Editor UI ───
     ed_entities: "Entities",
     ed_calendars: "Calendars",
+    ed_add_calendar: "Add calendar",
+    ed_add_todo: "Add todo list",
     ed_todo_lists: "Todo lists",
     ed_general: "General",
     ed_header: "Header",
@@ -1549,6 +1571,12 @@ const I18N = {
     ed_lang_label: "Language",
     ed_time_format: "Time format",
     ed_first_day: "First day of the week",
+    opt_system_default: "System default",
+    opt_24h: "24 hours (13:30)",
+    opt_12h: "12 hours (1:30 PM)",
+    opt_monday: "Monday",
+    opt_sunday: "Sunday",
+    opt_saturday: "Saturday",
     ed_display: "Display",
     ed_weather: "Weather",
     ed_tasks: "Tasks",
@@ -1612,9 +1640,21 @@ const I18N = {
     ed_show_weather_per_day: "Show weather per day (next to date)",
     ed_show_overdue: "Show overdue tasks",
     ed_overdue_days: "Overdue days to show (0 = all)",
+    ed_completed_days: "Completed days to show",
     ed_show_completed: "Show completed tasks",
     ed_allow_complete: "Allow completing tasks",
     ed_action: "Action",
+    ed_act_none: "None",
+    ed_act_more_info: "More info",
+    ed_act_toggle: "Toggle",
+    ed_act_navigate: "Navigate",
+    ed_act_url: "URL",
+    ed_act_call_service: "Call service",
+    ed_act_assist: "Assist",
+    ed_param_path: "Path",
+    ed_param_url: "URL",
+    ed_param_service: "Service",
+    ed_param_entity: "Entity (optional)",
     ed_data_json: "Data (JSON)",
     ed_choose_color: "Choose color",
     ed_automatic: "Automatic",
@@ -1664,6 +1704,8 @@ const I18N = {
     // ─── Editor UI ───
     ed_entities: "Entities",
     ed_calendars: "Kalender",
+    ed_add_calendar: "Kalender hinzufügen",
+    ed_add_todo: "Liste hinzufügen",
     ed_todo_lists: "Todo Liste",
     ed_general: "Allgemein",
     ed_header: "Kopfzeile",
@@ -1673,6 +1715,12 @@ const I18N = {
     ed_lang_label: "Sprache",
     ed_time_format: "Zeitformat",
     ed_first_day: "Erster Tag der Woche",
+    opt_system_default: "Systemstandard",
+    opt_24h: "24 Stunden (13:30)",
+    opt_12h: "12 Stunden (1:30 PM)",
+    opt_monday: "Montag",
+    opt_sunday: "Sonntag",
+    opt_saturday: "Samstag",
     ed_display: "Anzeige",
     ed_weather: "Wetter",
     ed_tasks: "Aufgaben",
@@ -1736,9 +1784,21 @@ const I18N = {
     ed_show_weather_per_day: "Zeige Wetterbericht (nächste Tage)",
     ed_show_overdue: "Zeige überfällige Aufgaben",
     ed_overdue_days: "Überfällig anzeigen für X Tage (0 = Alle)",
+    ed_completed_days: "Erledigte Tage anzeigen",
     ed_show_completed: "Zeige erledigte Aufgaben",
     ed_allow_complete: "Erlaube Aufgaben abhaken",
     ed_action: "Aktion",
+    ed_act_none: "Keine",
+    ed_act_more_info: "Mehr Infos",
+    ed_act_toggle: "Umschalten",
+    ed_act_navigate: "Navigieren",
+    ed_act_url: "URL",
+    ed_act_call_service: "Dienst aufrufen",
+    ed_act_assist: "Assist",
+    ed_param_path: "Pfad",
+    ed_param_url: "URL",
+    ed_param_service: "Dienst",
+    ed_param_entity: "Entität (optional)",
     ed_data_json: "Daten (JSON)",
     ed_choose_color: "Farbe wählen",
     ed_automatic: "Automatisch",
@@ -1788,6 +1848,8 @@ const I18N = {
     // ─── Editor UI ───
     ed_entities: "Entités",
     ed_calendars: "Calendriers",
+    ed_add_calendar: "Ajouter un calendrier",
+    ed_add_todo: "Ajouter une liste",
     ed_todo_lists: "Listes de tâches",
     ed_general: "Général",
     ed_header: "En-tête",
@@ -1797,6 +1859,12 @@ const I18N = {
     ed_lang_label: "Langue",
     ed_time_format: "Format de l'heure",
     ed_first_day: "Premier jour de la semaine",
+    opt_system_default: "Par défaut du système",
+    opt_24h: "24 heures (13:30)",
+    opt_12h: "12 heures (1:30 PM)",
+    opt_monday: "Lundi",
+    opt_sunday: "Dimanche",
+    opt_saturday: "Samedi",
     ed_display: "Affichage",
     ed_weather: "Météo",
     ed_tasks: "Tâches",
@@ -1860,9 +1928,21 @@ const I18N = {
     ed_show_weather_per_day: "Afficher la météo par jour (à côté de la date)",
     ed_show_overdue: "Afficher les tâches en retard",
     ed_overdue_days: "Jours de retard à afficher (0 = tous)",
+    ed_completed_days: "Jours terminés à afficher",
     ed_show_completed: "Afficher les tâches terminées",
     ed_allow_complete: "Permettre de terminer les tâches",
     ed_action: "Action",
+    ed_act_none: "Aucune",
+    ed_act_more_info: "Plus d'infos",
+    ed_act_toggle: "Basculer",
+    ed_act_navigate: "Naviguer",
+    ed_act_url: "URL",
+    ed_act_call_service: "Appeler un service",
+    ed_act_assist: "Assist",
+    ed_param_path: "Chemin",
+    ed_param_url: "URL",
+    ed_param_service: "Service",
+    ed_param_entity: "Entité (facultatif)",
     ed_data_json: "Données (JSON)",
     ed_choose_color: "Choisir la couleur",
     ed_automatic: "Automatique",
@@ -2468,7 +2548,13 @@ class CalendarTasksCard extends HTMLElement {
       document.head.appendChild(st);
     }
 
-    const lang = this._resolveLang ? this._resolveLang() : "en";
+    let lang = "en";
+    try {
+      const hl = this._hass && this._hass.locale && this._hass.locale.language
+        ? this._hass.locale.language
+        : (this._hass && this._hass.language) || null;
+      lang = resolveLanguage(this._config && this._config.language, hl);
+    } catch (e) { lang = "en"; }
 
     // Overlay + pannello del form
     const overlay = document.createElement("div");
@@ -3039,9 +3125,20 @@ class CalendarTasksCard extends HTMLElement {
       for (const ev of events) {
         const color = getEntityColor(ev._source, this._config);
         const allDay = !ev.start.dateTime;
+        // Posizione dell'evento nel suo intervallo multi-giorno (per le frecce)
+        const pos = getEventDayPosition(ev, date);
+        const dayIndex = pos.dayIndex || 1;
+        const totalDays = pos.totalDays || 1;
         let timeStr = "";
         if (allDay) {
           timeStr = t("all_day", lang);
+        } else if (totalDays > 1) {
+          // Multi-giorno con ora: primo "10:00 →", ultimo "→ 12:00", intermedi "tutto il giorno".
+          const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
+          const eAlways = fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale);
+          if (dayIndex === 1) timeStr = `${s} →`;
+          else if (dayIndex === totalDays) timeStr = `→ ${eAlways}`;
+          else timeStr = t("all_day", lang);
         } else {
           // Orario di fine solo se il toggle show_end_time è attivo (come in agenda)
           const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
@@ -3678,11 +3775,25 @@ class CalendarTasksCard extends HTMLElement {
           const dayIndex = ev._ctcDayIndex || 1;
           const totalDays = ev._ctcTotalDays || 1;
           const isContinuation = totalDays > 1 && dayIndex > 1;
+          const isLastDay = totalDays > 1 && dayIndex === totalDays;
           const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
           const e = this._config.show_end_time ? fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale) : null;
-          // Nei giorni di prosecuzione l'orario di inizio non ha senso (l'evento è
-          // già cominciato), quindi mostriamo "tutto il giorno".
-          const timeStr = (allDay || isContinuation) ? t("all_day", lang) : (e ? `${s}–${e}` : s);
+          const eAlways = fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale);
+          // Orario per gli eventi multi-giorno con ora:
+          //  - primo giorno  → "10:00 →"  (parte da qui)
+          //  - ultimo giorno → "→ 12:00"  (arriva fin qui, ora di FINE)
+          //  - giorni intermedi → "tutto il giorno"
+          // La freccia distingue inizio da fine, così l'utente non confonde i due.
+          let timeStr;
+          if (allDay) {
+            timeStr = t("all_day", lang);
+          } else if (totalDays > 1) {
+            if (dayIndex === 1) timeStr = `${s} →`;
+            else if (isLastDay) timeStr = `→ ${eAlways}`;
+            else timeStr = t("all_day", lang);
+          } else {
+            timeStr = e ? `${s}–${e}` : s;
+          }
           // Contatore "(2/6)" accanto al titolo, come fanno Google e Apple Calendar
           const dayCounter = totalDays > 1
             ? `<span class="ctc-day-counter">(${dayIndex}/${totalDays})</span>` : "";
@@ -4273,13 +4384,13 @@ class CalendarTasksCardEditor extends HTMLElement {
     sel.className = "ctc-native-input wide";
     blockHAShortcuts(sel);
     const options = [
-      { value: "none", text: "None" },
-      { value: "more-info", text: "More info" },
-      { value: "toggle", text: "Toggle" },
-      { value: "navigate", text: "Navigate" },
-      { value: "url", text: "URL" },
-      { value: "call-service", text: "Call service" },
-      { value: "assist", text: "Assist" },
+      { value: "none", text: t("ed_act_none", this._lang()) },
+      { value: "more-info", text: t("ed_act_more_info", this._lang()) },
+      { value: "toggle", text: t("ed_act_toggle", this._lang()) },
+      { value: "navigate", text: t("ed_act_navigate", this._lang()) },
+      { value: "url", text: t("ed_act_url", this._lang()) },
+      { value: "call-service", text: t("ed_act_call_service", this._lang()) },
+      { value: "assist", text: t("ed_act_assist", this._lang()) },
     ];
     options.forEach(opt => {
       const o = document.createElement("option");
@@ -4326,10 +4437,10 @@ class CalendarTasksCardEditor extends HTMLElement {
         paramsContainer.appendChild(row);
       };
 
-      if (a === "navigate") addParam("Path", c.navigation_path, "navigation_path", "/lovelace/home");
-      else if (a === "url") addParam("URL", c.url_path, "url_path", "https://...");
+      if (a === "navigate") addParam(t("ed_param_path", this._lang()), c.navigation_path, "navigation_path", "/lovelace/home");
+      else if (a === "url") addParam(t("ed_param_url", this._lang()), c.url_path, "url_path", "https://...");
       else if (a === "call-service") {
-        addParam("Service", c.service, "service", "domain.service");
+        addParam(t("ed_param_service", this._lang()), c.service, "service", "domain.service");
         // Per service_data accettiamo JSON
         const row = document.createElement("div");
         row.className = "field-row";
@@ -4350,7 +4461,7 @@ class CalendarTasksCardEditor extends HTMLElement {
         row.append(l, inp);
         paramsContainer.appendChild(row);
       }
-      else if (a === "more-info" || a === "toggle") addParam("Entità (opzionale)", c.entity, "entity", "domain.entity");
+      else if (a === "more-info" || a === "toggle") addParam(t("ed_param_entity", this._lang()), c.entity, "entity", "domain.entity");
     };
     renderParams(cfg);
 
@@ -4564,7 +4675,7 @@ class CalendarTasksCardEditor extends HTMLElement {
         sub.body.appendChild(calList);
         const addCal = document.createElement("button");
         addCal.className = "add-btn";
-        addCal.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon> Add calendar`;
+        addCal.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon> ${t("ed_add_calendar", lang)}`;
         addCal.addEventListener("click", () => {
           this._config.calendars = [...(this._config.calendars || []), ""];
           this._fire();
@@ -4586,7 +4697,7 @@ class CalendarTasksCardEditor extends HTMLElement {
         sub.body.appendChild(todoList);
         const addTodo = document.createElement("button");
         addTodo.className = "add-btn";
-        addTodo.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon> Add todo list`;
+        addTodo.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon> ${t("ed_add_todo", lang)}`;
         addTodo.addEventListener("click", () => {
           this._config.todos = [...(this._config.todos || []), ""];
           this._fire();
@@ -4710,7 +4821,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       body.appendChild(this._makeSelect(t("ed_lang_label", lang),
         this._config.language || "auto",
         [
-          { value: "auto", text: "System default" },
+          { value: "auto", text: t("opt_system_default", lang) },
           { value: "it", text: "Italiano" },
           { value: "en", text: "English" },
           { value: "de", text: "Deutsch" },
@@ -4721,19 +4832,19 @@ class CalendarTasksCardEditor extends HTMLElement {
       body.appendChild(this._makeSelect(t("ed_time_format", lang),
         this._config.time_format || "auto",
         [
-          { value: "auto", text: "System default" },
-          { value: "24h", text: "24 hours (13:30)" },
-          { value: "12h", text: "12 hours (1:30 PM)" },
+          { value: "auto", text: t("opt_system_default", lang) },
+          { value: "24h", text: t("opt_24h", lang) },
+          { value: "12h", text: t("opt_12h", lang) },
         ],
         v => { this._config.time_format = v; this._fire(); }));
 
       body.appendChild(this._makeSelect(t("ed_first_day", lang),
         this._config.first_day_of_week || "auto",
         [
-          { value: "auto", text: "System default" },
-          { value: "monday", text: "Monday" },
-          { value: "sunday", text: "Sunday" },
-          { value: "saturday", text: "Saturday" },
+          { value: "auto", text: t("opt_system_default", lang) },
+          { value: "monday", text: t("opt_monday", lang) },
+          { value: "sunday", text: t("opt_sunday", lang) },
+          { value: "saturday", text: t("opt_saturday", lang) },
         ],
         v => { this._config.first_day_of_week = v; this._fire(); }));
 
@@ -4927,7 +5038,7 @@ class CalendarTasksCardEditor extends HTMLElement {
       const rowCompletedDays = document.createElement("div");
       rowCompletedDays.className = "field-row";
       const lblCompletedDays = document.createElement("label");
-      lblCompletedDays.textContent = "Completed days to show";
+      lblCompletedDays.textContent = t("ed_completed_days", lang);
       const inpCompletedDays = this._makeInput("inp-completed-days", "number", this._config.completed_days != null ? this._config.completed_days : 7, "narrow",
         v => {
           const n = parseInt(v);
