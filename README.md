@@ -4,6 +4,8 @@
 [![GitHub Release](https://img.shields.io/github/v/release/korova-sq/calendar-tasks-card)](https://github.com/korova-sq/calendar-tasks-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![Calendar & Tasks Card](screenshots/banner.png)
+
 ## 🤔 What is Calendar & Tasks Card?
 
 Calendar & Tasks Card is a unified agenda view for [Home Assistant](https://www.home-assistant.io/) that combines **calendar events** and **todo tasks** in a single, clean timeline.
@@ -14,6 +16,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 - 🛠 **Visual editor** for all options (no YAML editing required)
 - 📅 **Unified view**: events and tasks in one timeline, sorted by date
+- 🗓️ **Monthly grid view**: switch to a classic month calendar with event dots, tap-a-day popup, and month navigation
 - 🎨 **Color picker**: 12-color palette per entity, auto-assigned when unset
 - ✅ **Task completion**: tick tasks directly from the card
 - 🚨 **Overdue section**: tasks past their deadline highlighted in red
@@ -31,13 +34,23 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - ➕ **Add event/task**: inline form to create calendar events and todo tasks without leaving the card
 - 🔍 **Exclude filter**: hide events and tasks with specific keywords in their titles
 - 🔄 **Force refresh**: button to update all integrations on demand
-- 🌐 **Internationalization**: English, Italian and German, auto-detects from system (card display + visual editor)
+- 🌐 **Internationalization**: English, Italian, German and French, auto-detects from system (card display + visual editor)
 - 🕐 **Time format**: 12h or 24h, follows system preferences
 - 👆 **Customizable actions**: tap, hold, double-tap (Home Assistant standard)
 - 🪶 **Clean YAML**: only non-default settings are saved
 - 🚀 **Zero dependencies**: no other custom cards required
 
 ## 📸 Screenshots
+
+### 🗓️ Monthly grid view
+![Monthly grid view](screenshots/06-month-view.jpeg)
+
+<table>
+<tr>
+<td width="50%"><b>📅 Month picker</b><br><img src="screenshots/07-month-picker.jpeg" width="100%"></td>
+<td width="50%"><b>📋 Day popup</b><br><img src="screenshots/08-day-popup.jpeg" width="100%"></td>
+</tr>
+</table>
 
 ### Main view with overdue and completed
 ![Main view](screenshots/01-overview.jpeg)
@@ -145,7 +158,8 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 ### 👁 Display
 | Option | Default | Description |
 |---|---|---|
-| `show_week_number` | `false` | ISO 8601 week separators |
+| `month_view` | `false` | Show a monthly calendar grid instead of the agenda list, with event dots, a tap-a-day popup and month navigation |
+| `show_week_number` | `false` | ISO 8601 week separators (agenda) / week-number column (grid) |
 | `show_end_time` | `false` | Show `HH:MM–HH:MM` for events |
 | `multi_day_events` | `true` | Show multi-day events on every day they span, with a `(2/6)` day counter |
 | `show_empty_days` | `false` | Show days with no events |

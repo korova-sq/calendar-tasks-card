@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-XX-XX
+
+### Added
+
+- **Monthly grid view**: a new `month_view` option switches the card from the
+  agenda list to a classic month calendar grid, with the days of the month laid
+  out in a 7-column grid. Today is highlighted, days from the previous/next
+  month are dimmed, and the week starts on your configured first day of the week.
+- **Event dots**: days that have at least one event or task show a small dot, so
+  you can see at a glance where things are happening across the whole month.
+- **Day popup**: tap any day to open a popup listing that day's events and tasks,
+  each with its entity colour, time range, all-day flag, location and
+  description. Empty days show a "no events" message. An **Add** button opens the
+  create form with that day's date pre-filled.
+- **Month navigation**: previous/next arrows move between months, and tapping the
+  month name opens a picker — a grid of the 12 months with year arrows and a
+  **Today** button to jump straight back to the current month.
+- **French translation**: the card and the visual editor are now available in
+  French, in addition to Italian, English and German.
+
+### Notes
+
+- The month view respects all your existing display toggles: compact mode makes
+  the grid denser, "show week number" adds a left column of ISO week numbers,
+  and the day popup honours show description / location / end time / clickable
+  location / relative time exactly like the agenda.
+- The today-weather widget is shown above the grid too; per-day weather stays in
+  the agenda view.
+- `month_view` defaults to off, so existing setups keep the agenda view and look
+  exactly as before.
+
+### Credits
+
+- French translation contributed by [@JourMic](https://github.com/JourMic)
+  (issue [#6](https://github.com/korova-sq/calendar-tasks-card/issues/6)). Merci !
+
+[1.8.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.8.0
+
 ## [1.7.0] - 2026-XX-XX
 
 ### Added

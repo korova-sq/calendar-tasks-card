@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.7.0
+ * calendar-tasks-card v1.8.0
  */
 
-const CARD_VERSION = "1.7.0";
+const CARD_VERSION = "1.8.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -49,6 +49,7 @@ const DEFAULT_CONFIG = {
   show_collapse_button: true,
   time_format: "auto",      // "auto" (segue locale), "12h", "24h"
   first_day_of_week: "auto", // "auto" (segue locale), "monday", "sunday", "saturday"
+  month_view: false,        // false = vista agenda (lista), true = vista griglia mensile
   language: "auto",         // "auto" (locale del browser/HA), "en" (inglese), "it" (italiano)
   refresh_interval: 300,
   limit_events_visible: false,    // se true, attiva la scrollbar e mostra solo max_events_visible giorni
@@ -560,6 +561,138 @@ const STYLES = `
   .ctc-compact .ctc-weather-today { padding: 6px 16px; }
   .ctc-compact .ctc-weather-today-icon { --mdc-icon-size: 30px; }
 
+  /* Modalità compatta anche per la griglia mensile: celle più basse,
+     numeri e intestazioni più piccoli, meno spazi attorno alla griglia */
+  .ctc-compact .ctc-month { padding: 4px 8px 8px; }
+  .ctc-compact .ctc-month-header { margin-bottom: 6px; }
+  .ctc-compact .ctc-month-label { font-size: 14px; }
+  .ctc-compact .ctc-month-dow-cell { font-size: 10px; padding: 2px 0; }
+  .ctc-compact .ctc-month-grid { gap: 1px; }
+  .ctc-compact .ctc-month-cell { padding-top: 2px; border-radius: 6px; aspect-ratio: auto; min-height: 34px; }
+  .ctc-compact .ctc-month-num { font-size: 12px; width: 20px; height: 20px; }
+  .ctc-compact .ctc-month-wk-cell { line-height: 20px; }
+  .ctc-compact .ctc-month-dot { width: 4px; height: 4px; margin-top: 2px; }
+
+  /* ─── Vista griglia mensile ─── */
+  .ctc-month {
+    padding: 8px 12px 14px;
+  }
+  .ctc-month-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .ctc-month-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-text-color);
+    text-align: center;
+    flex: 1;
+  }
+  .ctc-month-label-active {
+    cursor: pointer;
+  }
+  .ctc-month-label-active:hover {
+    color: var(--primary-color, #03a9f4);
+  }
+  .ctc-month-nav {
+    background: transparent;
+    border: none;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-size: 22px;
+  }
+  .ctc-month-nav:hover {
+    background: var(--secondary-background-color, rgba(128,128,128,0.12));
+    color: var(--primary-text-color);
+  }
+  .ctc-month-dow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 4px;
+  }
+  /* Con la colonna numero settimana: prima colonna stretta + 7 colonne giorni */
+  .ctc-month-dow.ctc-month-hasweek,
+  .ctc-month-grid.ctc-month-hasweek {
+    grid-template-columns: 22px repeat(7, 1fr);
+  }
+  .ctc-month-wk-cell {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--ctc-hint, var(--disabled-text-color));
+    opacity: 0.7;
+  }
+  .ctc-month-dow-cell {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--secondary-text-color);
+    padding: 4px 0;
+  }
+  .ctc-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .ctc-month-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    border-radius: 8px;
+    padding-top: 4px;
+    box-sizing: border-box;
+  }
+  /* Pallino neutro: giorno con almeno un evento o task */
+  .ctc-month-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary-color, #03a9f4);
+    margin-top: 3px;
+  }
+  .ctc-month-clickable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .ctc-month-clickable:hover { background: var(--secondary-background-color, rgba(128,128,128,0.12)); }
+  .ctc-month-num {
+    font-size: 13px;
+    color: var(--primary-text-color);
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+  /* Giorni del mese precedente/successivo che riempiono la griglia: attenuati */
+  .ctc-month-other .ctc-month-num {
+    color: var(--ctc-hint, var(--disabled-text-color));
+    opacity: 0.5;
+  }
+  /* Oggi: cerchietto pieno col colore primario del tema.
+     Stessa box 24px degli altri numeri: cambia solo lo sfondo, così resta
+     allineato verticalmente e non "scende". */
+  .ctc-month-today .ctc-month-num {
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    border-radius: 50%;
+    font-weight: 600;
+  }
 
 `;
 
@@ -680,6 +813,130 @@ const ADD_FORM_STYLES = `
     color: var(--text-primary-color, #fff);
   }
   .ctc-add-save:disabled { opacity: 0.6; cursor: default; }
+
+  /* Selettore mese/anno: "Oggi" a sinistra, Annulla/Vai a destra */
+  .ctc-month-picker-actions { justify-content: space-between; }
+
+  /* Selettore a griglia: barra anno + 12 mesi */
+  .ctc-ypick-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 4px 0 10px;
+  }
+  .ctc-ypick-year {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-text-color);
+    flex: 1;
+    text-align: center;
+  }
+  .ctc-ypick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .ctc-ypick-month {
+    padding: 10px 4px;
+    border: 1px solid var(--divider-color, #ccc);
+    background: transparent;
+    color: var(--primary-text-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .ctc-ypick-month:hover {
+    background: var(--secondary-background-color, rgba(128,128,128,0.12));
+  }
+  /* Mese attualmente visualizzato nella card: bordo evidenziato */
+  .ctc-ypick-current {
+    border-color: var(--primary-color, #03a9f4);
+    color: var(--primary-color, #03a9f4);
+    font-weight: 600;
+  }
+  /* Mese reale di oggi: riempito */
+  .ctc-ypick-today {
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    border-color: var(--primary-color, #03a9f4);
+  }
+  .ctc-ypick-today:hover {
+    background: var(--primary-color, #03a9f4);
+    opacity: 0.9;
+  }
+
+  /* ─── Popup del giorno (vista griglia) ─── */
+  .ctc-day-list {
+    margin: 4px 0 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+  .ctc-day-empty {
+    color: var(--secondary-text-color);
+    font-size: 14px;
+    padding: 12px 2px;
+    text-align: center;
+  }
+  .ctc-day-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--divider-color, rgba(128,128,128,0.2));
+  }
+  .ctc-day-row:last-child { border-bottom: none; }
+  .ctc-day-bar {
+    flex: 0 0 4px;
+    width: 4px;
+    border-radius: 2px;
+    background: var(--primary-color);
+  }
+  .ctc-day-row-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .ctc-day-row-title {
+    font-size: 14px;
+    color: var(--primary-text-color);
+    word-break: break-word;
+  }
+  .ctc-day-row-time {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 1px;
+  }
+  .ctc-day-row-loc {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 2px;
+  }
+  .ctc-day-row-loc-link {
+    color: var(--primary-color, #03a9f4);
+    text-decoration: none;
+  }
+  .ctc-day-row-loc-link:hover { text-decoration: underline; }
+  .ctc-day-row-rel {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 1px;
+    font-style: italic;
+  }
+  .ctc-day-row-loc .ctc-loc-icon {
+    --mdc-icon-size: 14px;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+  .ctc-day-row-desc {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 2px;
+    word-break: break-word;
+  }
 `;
 
 /* ─── Stili editor ──────────────────────────────────────────────── */
@@ -945,6 +1202,23 @@ const WEATHER_LABELS = {
     "windy": "Windig",
     "windy-variant": "Windig",
   },
+  fr: {
+    "clear-night": "Dégagé",
+    "cloudy": "Nuageux",
+    "exceptional": "Exceptionnel",
+    "fog": "Brouillard",
+    "hail": "Grêle",
+    "lightning": "Orage",
+    "lightning-rainy": "Orage avec pluie",
+    "partlycloudy": "Partiellement nuageux",
+    "pouring": "Pluies fortes",
+    "rainy": "Pluvieux",
+    "snowy": "Neige",
+    "snowy-rainy": "Neige fondante",
+    "sunny": "Ensoleillé",
+    "windy": "Venteux",
+    "windy-variant": "Venteux",
+  },
 };
 
 function getWeatherLabel(condition, lang) {
@@ -1145,7 +1419,13 @@ const I18N = {
     ed_calendars: "Calendari",
     ed_todo_lists: "Liste todo",
     ed_general: "Generale",
+    ed_header: "Header",
+    ed_layout: "Layout",
+    ed_event_detail: "Dettaglio evento",
     ed_localization: "Localizzazione",
+    ed_lang_label: "Lingua",
+    ed_time_format: "Formato ora",
+    ed_first_day: "Primo giorno della settimana",
     ed_display: "Visualizzazione",
     ed_weather: "Meteo",
     ed_tasks: "Task",
@@ -1183,6 +1463,13 @@ const I18N = {
     ed_show_week_number: "Mostra numero settimana",
     ed_show_end_time: "Mostra orario di fine",
     ed_multi_day_events: "Mostra eventi multi-giorno in tutti i giorni",
+    ed_month_view: "Vista calendario mensile (griglia)",
+    day_no_events: "Nessun evento o task",
+    month_pick: "Vai al mese",
+    month_label: "Mese",
+    year_label: "Anno",
+    month_today_btn: "Oggi",
+    month_go: "Vai",
     ed_background: "Sfondo",
     ed_transparent: "Sfondo trasparente",
     ed_background_image: "Immagine di sfondo (URL o percorso /local/…)",
@@ -1255,7 +1542,13 @@ const I18N = {
     ed_calendars: "Calendars",
     ed_todo_lists: "Todo lists",
     ed_general: "General",
+    ed_header: "Header",
+    ed_layout: "Layout",
+    ed_event_detail: "Event detail",
     ed_localization: "Localization",
+    ed_lang_label: "Language",
+    ed_time_format: "Time format",
+    ed_first_day: "First day of the week",
     ed_display: "Display",
     ed_weather: "Weather",
     ed_tasks: "Tasks",
@@ -1293,6 +1586,13 @@ const I18N = {
     ed_show_week_number: "Show week number",
     ed_show_end_time: "Show end time",
     ed_multi_day_events: "Show multi-day events on every day",
+    ed_month_view: "Monthly calendar view (grid)",
+    day_no_events: "No events or tasks",
+    month_pick: "Go to month",
+    month_label: "Month",
+    year_label: "Year",
+    month_today_btn: "Today",
+    month_go: "Go",
     ed_background: "Background",
     ed_transparent: "Transparent background",
     ed_background_image: "Background image (URL or /local/… path)",
@@ -1366,7 +1666,13 @@ const I18N = {
     ed_calendars: "Kalender",
     ed_todo_lists: "Todo Liste",
     ed_general: "Allgemein",
+    ed_header: "Kopfzeile",
+    ed_layout: "Layout",
+    ed_event_detail: "Ereignisdetails",
     ed_localization: "Sprache",
+    ed_lang_label: "Sprache",
+    ed_time_format: "Zeitformat",
+    ed_first_day: "Erster Tag der Woche",
     ed_display: "Anzeige",
     ed_weather: "Wetter",
     ed_tasks: "Aufgaben",
@@ -1404,6 +1710,13 @@ const I18N = {
     ed_show_week_number: "Zeige Kalenderwoche",
     ed_show_end_time: "Zeige Endzeit",
     ed_multi_day_events: "Mehrtägige Ereignisse an allen Tagen zeigen",
+    ed_month_view: "Monatskalender-Ansicht (Raster)",
+    day_no_events: "Keine Ereignisse oder Aufgaben",
+    month_pick: "Zum Monat gehen",
+    month_label: "Monat",
+    year_label: "Jahr",
+    month_today_btn: "Heute",
+    month_go: "Los",
     ed_background: "Hintergrund",
     ed_transparent: "Transparenter Hintergrund",
     ed_background_image: "Hintergrundbild (URL oder /local/…-Pfad)",
@@ -1450,6 +1763,130 @@ const I18N = {
     overdue_months_n: (n) => `Etwa ${n} Monate überfällig`,
     days: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
     months: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+  },
+  // Traduzione francese contribuita da @JourMic (issue #6). Merci !
+  fr: {
+    agenda: "Agenda",
+    today: "Aujourd'hui",
+    tomorrow: "Demain",
+    yesterday: "Hier",
+    no_events: (n) => n === 1 ? "Aucun événement le prochain jour" : `Aucun événement dans les ${n} prochains jours`,
+    no_events_day: "Aucun événement",
+    all_day: "Toute la journée",
+    overdue: "En retard",
+    no_date: "Sans date",
+    completed: "Terminé",
+    open_in_maps: "Ouvrir dans Maps",
+    weather_today: "Aujourd'hui",
+    weather_min: "Min",
+    weather_max: "Max",
+    weather_humidity: "Humidité",
+    exclude_keywords: "Mots-clés à exclure",
+    exclude_placeholder: "ex. Anniversaire, Réunion",
+    exclude_add: "Ajouter",
+    exclude_help: "Les événements et tâches dont le titre contient ces mots-clés seront masqués (correspondance partielle, insensible à la casse)",
+    // ─── Editor UI ───
+    ed_entities: "Entités",
+    ed_calendars: "Calendriers",
+    ed_todo_lists: "Listes de tâches",
+    ed_general: "Général",
+    ed_header: "En-tête",
+    ed_layout: "Disposition",
+    ed_event_detail: "Détail de l'événement",
+    ed_localization: "Localisation",
+    ed_lang_label: "Langue",
+    ed_time_format: "Format de l'heure",
+    ed_first_day: "Premier jour de la semaine",
+    ed_display: "Affichage",
+    ed_weather: "Météo",
+    ed_tasks: "Tâches",
+    ed_filters: "Filtres",
+    ed_interactions: "Interactions",
+    ed_title: "Titre",
+    ed_days_to_show: "Jours à afficher",
+    ed_max_events_visible: "Nombre max d'événements visibles",
+    ed_show_title: "Afficher le titre",
+    ed_show_refresh: "Afficher le bouton actualiser",
+    ed_show_add_event: "Afficher le bouton ajouter",
+    add_event: "Ajouter un événement",
+    add_type_event: "Événement",
+    add_type_task: "Tâche",
+    add_calendar: "Calendrier",
+    add_list: "Liste",
+    add_summary: "Titre",
+    add_title_ph: "Titre",
+    add_all_day: "Toute la journée",
+    add_start: "Début",
+    add_end: "Fin",
+    add_due: "Date d'échéance (facultatif)",
+    add_description: "Description (facultatif)",
+    add_location: "Lieu (facultatif)",
+    add_saving: "Enregistrement…",
+    add_cancel: "Annuler",
+    add_save: "Enregistrer",
+    add_err_title: "Veuillez saisir un titre",
+    add_err_dates: "Veuillez saisir les dates de début et de fin",
+    add_err_endbefore: "La fin doit être après le début",
+    add_err_generic: "Erreur lors de l'enregistrement",
+    ed_show_collapse: "Afficher le bouton réduire",
+    ed_limit_events: "Limiter les événements visibles (barre de défilement)",
+    ed_compact_mode: "Mode compact (espacement réduit)",
+    ed_show_week_number: "Afficher le numéro de semaine",
+    ed_show_end_time: "Afficher l'heure de fin",
+    ed_multi_day_events: "Afficher les événements multi-jours chaque jour",
+    ed_month_view: "Vue calendrier mensuel (grille)",
+    day_no_events: "Aucun événement ou tâche",
+    month_pick: "Aller au mois",
+    month_label: "Mois",
+    year_label: "Année",
+    month_today_btn: "Aujourd'hui",
+    month_go: "Aller",
+    ed_background: "Arrière-plan",
+    ed_transparent: "Arrière-plan transparent",
+    ed_background_image: "Image d'arrière-plan",
+    ed_overlay: "Voile : plus clair ⟵ aucun ⟶ plus foncé",
+    ed_ov_lighter: "Plus clair",
+    ed_ov_zero: "0",
+    ed_ov_darker: "Plus foncé",
+    ed_show_empty_days: "Afficher les jours vides",
+    ed_show_relative_time: "Afficher le temps relatif (dans X jours)",
+    ed_show_source: "Afficher la source (calendrier/liste)",
+    ed_show_description: "Afficher la description",
+    ed_show_location: "Afficher le lieu (événements calendrier)",
+    ed_location_clickable: "Rendre le lieu cliquable (ouvre Maps)",
+    ed_weather_entity: "Entité météo",
+    ed_show_weather: "Afficher la météo",
+    ed_show_weather_today: "Afficher la météo du jour (widget en haut)",
+    ed_show_weather_per_day: "Afficher la météo par jour (à côté de la date)",
+    ed_show_overdue: "Afficher les tâches en retard",
+    ed_overdue_days: "Jours de retard à afficher (0 = tous)",
+    ed_show_completed: "Afficher les tâches terminées",
+    ed_allow_complete: "Permettre de terminer les tâches",
+    ed_action: "Action",
+    ed_data_json: "Données (JSON)",
+    ed_choose_color: "Choisir la couleur",
+    ed_automatic: "Automatique",
+    ed_tap: "Appui",
+    ed_hold: "Appui long",
+    ed_double_tap: "Double appui",
+    week_short: "Sem.",
+    collapse_all: "Tout réduire",
+    expand_all: "Tout développer",
+    refresh: "Actualiser",
+    days_missing_one: "Dans 1 jour",
+    days_missing_n: (n) => `Dans ${n} jours`,
+    week_missing_one: "Dans 1 semaine",
+    weeks_missing_two: "Dans 2 semaines",
+    month_missing_one: "Dans environ 1 mois",
+    months_missing_n: (n) => `Dans environ ${n} mois`,
+    overdue_one: "1 jour de retard",
+    overdue_n: (n) => `${n} jours de retard`,
+    overdue_week_one: "1 semaine de retard",
+    overdue_weeks_two: "2 semaines de retard",
+    overdue_month_one: "Environ 1 mois de retard",
+    overdue_months_n: (n) => `Environ ${n} mois de retard`,
+    days: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
+    months: ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
   },
 };
 
@@ -1929,9 +2366,33 @@ class CalendarTasksCard extends HTMLElement {
       }
     }
 
-    const start = new Date();
-    const end = new Date();
-    end.setDate(end.getDate() + (this._config.days || 7));
+    // Finestra di caricamento eventi.
+    // - Vista agenda: da oggi a oggi+days.
+    // - Vista griglia mensile: l'intero mese visibile (le 6 settimane della
+    //   griglia, cioè dal primo giorno mostrato all'ultimo), così i pallini
+    //   compaiono su tutti i giorni del mese che hanno qualcosa, non solo sui
+    //   primi `days` giorni.
+    let start = new Date();
+    let end = new Date();
+    if (this._config.month_view === true) {
+      const hassLanguage = this._hass?.locale?.language || this._hass?.language || null;
+      const dispLocale = this._config.language && this._config.language !== "auto"
+        ? this._config.language
+        : (hassLanguage || (typeof navigator !== "undefined" ? navigator.language : "it-IT"));
+      const fdow = resolveFirstDayOfWeek(this._config.first_day_of_week, dispLocale);
+      const now = new Date();
+      const offsetMonths = this._monthOffset || 0;
+      const first = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
+      first.setHours(0, 0, 0, 0);
+      const offset = (first.getDay() - fdow + 7) % 7;
+      start = new Date(first);
+      start.setDate(first.getDate() - offset);
+      // 42 celle (6 righe) coprono qualsiasi mese; end = start + 42 giorni
+      end = new Date(start);
+      end.setDate(start.getDate() + 42);
+    } else {
+      end.setDate(end.getDate() + (this._config.days || 7));
+    }
     const [events, tasks, weatherForecast] = await Promise.all([
       this._fetchCalendarEvents(start, end),
       this._fetchTodoItems(),
@@ -1989,7 +2450,7 @@ class CalendarTasksCard extends HTMLElement {
        - task todo         → todo.add_item
      Il form resta dentro la card, così si possono aggiungere più elementi di
      seguito senza cambiare pagina. */
-  _openAddEventDialog() {
+  _openAddEventDialog(presetDate) {
     if (!this._cardElement) return;
     const calendars = (this._config.calendars || []).filter(isValidEntityId);
     const todos = (this._config.todos || []).filter(isValidEntityId);
@@ -2127,7 +2588,14 @@ class CalendarTasksCard extends HTMLElement {
         allDayRow.classList.add("ctc-add-inline");
         fields.appendChild(allDayRow);
 
-        const now = new Date();
+        // Se è stata passata una data (dal popup del giorno), la uso come base,
+        // mantenendo l'ora corrente. Altrimenti parto da adesso.
+        let now = new Date();
+        if (presetDate) {
+          const base = new Date(presetDate);
+          base.setHours(now.getHours(), now.getMinutes(), 0, 0);
+          now = base;
+        }
         const inOneHour = new Date(now.getTime() + 3600000);
 
         // Inizio / Fine
@@ -2174,6 +2642,11 @@ class CalendarTasksCard extends HTMLElement {
         inpDue = document.createElement("input");
         inpDue.type = "date";
         inpDue.className = "ctc-native-input wide";
+        // Se apro dal popup di un giorno, preimposto quella data come scadenza
+        if (presetDate) {
+          const p = (n) => String(n).padStart(2, "0");
+          inpDue.value = `${presetDate.getFullYear()}-${p(presetDate.getMonth() + 1)}-${p(presetDate.getDate())}`;
+        }
         blockHAShortcuts(inpDue);
         fields.appendChild(mkField(t("add_due", lang), inpDue));
 
@@ -2281,6 +2754,466 @@ class CalendarTasksCard extends HTMLElement {
     document.body.appendChild(overlay);
     // Focus sul titolo per digitare subito
     setTimeout(() => { try { inpTitle.focus(); } catch (e) {} }, 50);
+  }
+
+  /* Costruisce la vista a griglia mensile (statica, primo step).
+     Mostra il mese corrente: intestazione col nome del mese, riga dei giorni
+     della settimana, e le celle dei giorni numerati, allineate al giorno della
+     settimana d'inizio configurato. Oggi è evidenziato; i giorni del mese
+     precedente/successivo che riempiono la griglia sono attenuati.
+     I pallini eventi/task e il click sul giorno arriveranno nei passi successivi. */
+  _buildMonthGrid(displayLocale, firstDayOfWeek, lang, timeFormat) {
+    const wrap = document.createElement("div");
+    wrap.className = "ctc-month";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Mese visualizzato = mese corrente + offset di navigazione.
+    // _monthOffset: 0 = mese corrente, +1 = successivo, -1 = precedente.
+    // Persiste durante i refresh di background, riparte da 0 alla riapertura.
+    const offsetMonths = this._monthOffset || 0;
+    const viewBase = new Date(today.getFullYear(), today.getMonth() + offsetMonths, 1);
+    const viewYear = viewBase.getFullYear();
+    const viewMonth = viewBase.getMonth(); // 0-based
+
+    // Intestazione: freccia indietro · nome mese+anno · freccia avanti, e "Oggi"
+    const header = document.createElement("div");
+    header.className = "ctc-month-header";
+
+    const prevBtn = document.createElement("button");
+    prevBtn.type = "button";
+    prevBtn.className = "ctc-month-nav";
+    prevBtn.innerHTML = `<ha-icon icon="mdi:chevron-left"></ha-icon>`;
+    prevBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._monthOffset = (this._monthOffset || 0) - 1;
+      this._fetchAll();
+    });
+
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "ctc-month-nav";
+    nextBtn.innerHTML = `<ha-icon icon="mdi:chevron-right"></ha-icon>`;
+    nextBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._monthOffset = (this._monthOffset || 0) + 1;
+      this._fetchAll();
+    });
+
+    const label = document.createElement("div");
+    label.className = "ctc-month-label ctc-month-label-active";
+    const monthName = new Date(viewYear, viewMonth, 1)
+      .toLocaleDateString(displayLocale, { month: "long" });
+    const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    label.textContent = `${monthCap} ${viewYear}`;
+    // Cliccando il nome del mese si apre un selettore mese/anno
+    label.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._openMonthPicker(viewYear, viewMonth, displayLocale, lang);
+    });
+
+    header.append(prevBtn, label, nextBtn);
+    wrap.appendChild(header);
+
+    // Numero settimana attivo? Se sì, la griglia ha una colonna extra a sinistra.
+    const showWeek = this._config.show_week_number === true;
+
+    // Riga dei nomi dei giorni della settimana, a partire dal primo giorno configurato.
+    // firstDayOfWeek: 0=domenica, 1=lunedì, 6=sabato (come da resolveFirstDayOfWeek).
+    const dowRow = document.createElement("div");
+    dowRow.className = "ctc-month-dow";
+    if (showWeek) dowRow.classList.add("ctc-month-hasweek");
+    // Cella d'angolo vuota sopra la colonna dei numeri di settimana
+    if (showWeek) {
+      const corner = document.createElement("div");
+      corner.className = "ctc-month-dow-cell ctc-month-wk-cell";
+      dowRow.appendChild(corner);
+    }
+    for (let i = 0; i < 7; i++) {
+      const dowIndex = (firstDayOfWeek + i) % 7;
+      // Prendo un giorno noto di quel weekday per il nome localizzato.
+      // 2023-01-01 era una domenica, quindi +dowIndex dà il giorno giusto.
+      const sample = new Date(2023, 0, 1 + dowIndex);
+      const name = sample.toLocaleDateString(displayLocale, { weekday: "short" });
+      const cell = document.createElement("div");
+      cell.className = "ctc-month-dow-cell";
+      // Abbrevio a 3 lettere max e capitalizzo
+      cell.textContent = (name.charAt(0).toUpperCase() + name.slice(1)).slice(0, 3);
+      dowRow.appendChild(cell);
+    }
+    wrap.appendChild(dowRow);
+
+    // Calcolo la prima cella della griglia: il giorno 1 del mese, arretrato fino
+    // al primo giorno della settimana configurato.
+    const first = new Date(viewYear, viewMonth, 1);
+    first.setHours(0, 0, 0, 0);
+    let offset = (first.getDay() - firstDayOfWeek + 7) % 7;
+    const gridStart = new Date(first);
+    gridStart.setDate(first.getDate() - offset);
+
+    // Helper: il giorno `d` ha almeno un evento o un task?
+    // Eventi: uso getEventDayPosition che copre anche i multi-giorno.
+    // Task: confronto la data di scadenza (parseDueDate = orario locale).
+    const events = this._events || [];
+    const tasks = this._tasks || [];
+    const dayHasItems = (d) => {
+      const dk = dayKey(d);
+      for (const ev of events) {
+        const pos = getEventDayPosition(ev, d);
+        if (pos.inRange) return true;
+      }
+      for (const tk of tasks) {
+        const due = parseDueDate(tk.due);
+        if (due && dayKey(due) === dk) return true;
+      }
+      return false;
+    };
+
+    // Griglia di 6 righe × 7 = 42 celle: copre qualsiasi mese senza tagli.
+    const grid = document.createElement("div");
+    grid.className = "ctc-month-grid";
+    if (showWeek) grid.classList.add("ctc-month-hasweek");
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(gridStart);
+      d.setDate(gridStart.getDate() + i);
+      d.setHours(0, 0, 0, 0);
+
+      // All'inizio di ogni riga (ogni 7 celle), il numero di settimana ISO
+      if (showWeek && i % 7 === 0) {
+        const wk = document.createElement("div");
+        wk.className = "ctc-month-wk-cell";
+        wk.textContent = String(getISOWeekNumber(d));
+        grid.appendChild(wk);
+      }
+
+      const cell = document.createElement("div");
+      cell.className = "ctc-month-cell";
+      if (d.getMonth() !== viewMonth) cell.classList.add("ctc-month-other");
+      if (d.getTime() === today.getTime()) cell.classList.add("ctc-month-today");
+
+      const num = document.createElement("div");
+      num.className = "ctc-month-num";
+      num.textContent = String(d.getDate());
+      cell.appendChild(num);
+
+      // Pallino neutro se il giorno ha eventi o task
+      if (dayHasItems(d)) {
+        const dot = document.createElement("div");
+        dot.className = "ctc-month-dot";
+        cell.appendChild(dot);
+      }
+
+      // Click sul giorno → popup con eventi/task di quella data.
+      // Tutti i giorni sono cliccabili (anche quelli vuoti: mostrano "nessun
+      // evento", così un click non risponde mai in modo che sembri un bug).
+      cell.classList.add("ctc-month-clickable");
+      const cellDate = new Date(d);
+      cell.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._openDayPopup(cellDate, displayLocale, firstDayOfWeek, lang, timeFormat);
+      });
+
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+
+    return wrap;
+  }
+
+  /* Popup di un giorno: mostra eventi e task di quella data, ognuno col colore
+     della sua entità, e un pulsante per aggiungere un evento a quella data.
+     Riusa lo stesso meccanismo overlay del form aggiungi (attaccato al body per
+     evitare i problemi di posizionamento fixed dentro contenitori con transform). */
+  _openDayPopup(date, displayLocale, firstDayOfWeek, lang, timeFormat) {
+    if (!this._cardElement) return;
+    if (document.getElementById("ctc-add-overlay")) return;
+    // Riuso gli stili del form (già include l'overlay e il pannello)
+    if (!document.getElementById("ctc-add-form-styles")) {
+      const st = document.createElement("style");
+      st.id = "ctc-add-form-styles";
+      st.textContent = ADD_FORM_STYLES;
+      document.head.appendChild(st);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.id = "ctc-add-overlay";
+    overlay.className = "ctc-add-overlay";
+    overlay.style.cssText =
+      "position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;";
+
+    const panel = document.createElement("div");
+    panel.className = "ctc-add-panel";
+    overlay.appendChild(panel);
+
+    // Titolo: data estesa, es. "Lunedì 31 agosto"
+    const h = document.createElement("div");
+    h.className = "ctc-add-title";
+    const titleStr = date.toLocaleDateString(displayLocale, {
+      weekday: "long", day: "numeric", month: "long",
+    });
+    h.textContent = titleStr.charAt(0).toUpperCase() + titleStr.slice(1);
+    panel.appendChild(h);
+
+    // Raccolgo eventi e task del giorno
+    const events = (this._events || []).filter(ev => getEventDayPosition(ev, date).inRange);
+    const dk = dayKey(date);
+    const tasks = (this._tasks || []).filter(tk => {
+      const due = parseDueDate(tk.due);
+      return due && dayKey(due) === dk;
+    });
+
+    const list = document.createElement("div");
+    list.className = "ctc-day-list";
+
+    if (events.length === 0 && tasks.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "ctc-day-empty";
+      empty.textContent = t("day_no_events", lang);
+      list.appendChild(empty);
+    } else {
+      // Ordino gli eventi per orario di inizio
+      events.sort((a, b) =>
+        parseEventDate(a.start.dateTime || a.start.date) - parseEventDate(b.start.dateTime || b.start.date));
+
+      const mkRow = (color, title, timeStr, locText, descText, mapsUrl, relText) => {
+        const row = document.createElement("div");
+        row.className = "ctc-day-row";
+        const bar = document.createElement("span");
+        bar.className = "ctc-day-bar";
+        bar.style.background = color;
+        const main = document.createElement("div");
+        main.className = "ctc-day-row-main";
+        const t1 = document.createElement("div");
+        t1.className = "ctc-day-row-title";
+        t1.textContent = title;
+        main.appendChild(t1);
+        if (timeStr) {
+          const t2 = document.createElement("div");
+          t2.className = "ctc-day-row-time";
+          t2.textContent = timeStr;
+          main.appendChild(t2);
+        }
+        // Tempo relativo ("Tra 3 giorni", "Ieri") se attivo
+        if (relText) {
+          const r = document.createElement("div");
+          r.className = "ctc-day-row-rel";
+          r.textContent = relText;
+          main.appendChild(r);
+        }
+        // Luogo (con icona pin). Se location_clickable è attivo, lo rendo un
+        // link che apre Google Maps, come nell'agenda.
+        if (locText) {
+          const locEl = document.createElement("div");
+          locEl.className = "ctc-day-row-loc";
+          const pin = document.createElement("ha-icon");
+          pin.setAttribute("icon", "mdi:map-marker");
+          pin.className = "ctc-loc-icon";
+          let textNode;
+          if (mapsUrl) {
+            textNode = document.createElement("a");
+            textNode.href = mapsUrl;
+            textNode.target = "_blank";
+            textNode.rel = "noopener noreferrer";
+            textNode.className = "ctc-day-row-loc-link";
+            textNode.textContent = locText;
+            // Evito che il click sul link chiuda il popup o triggeri altro
+            textNode.addEventListener("click", (e) => e.stopPropagation());
+          } else {
+            textNode = document.createElement("span");
+            textNode.textContent = locText;
+          }
+          locEl.append(pin, textNode);
+          main.appendChild(locEl);
+        }
+        // Descrizione
+        if (descText) {
+          const d = document.createElement("div");
+          d.className = "ctc-day-row-desc";
+          d.textContent = descText;
+          main.appendChild(d);
+        }
+        row.append(bar, main);
+        return row;
+      };
+
+      for (const ev of events) {
+        const color = getEntityColor(ev._source, this._config);
+        const allDay = !ev.start.dateTime;
+        let timeStr = "";
+        if (allDay) {
+          timeStr = t("all_day", lang);
+        } else {
+          // Orario di fine solo se il toggle show_end_time è attivo (come in agenda)
+          const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
+          const e = (this._config.show_end_time && ev.end?.dateTime)
+            ? fmtTimeFormatted(ev.end.dateTime, timeFormat, displayLocale) : null;
+          timeStr = e ? `${s}–${e}` : s;
+        }
+        // Location e descrizione seguono i rispettivi toggle, come in agenda
+        const locText = (this._config.show_location && ev.location) ? formatLocation(ev.location) : "";
+        const descText = this._config.show_description ? sanitizeDescription(ev.description) : "";
+        // Location cliccabile → link Google Maps (se toggle attivo)
+        const mapsUrl = (locText && this._config.location_clickable) ? buildMapsUrl(locText) : "";
+        // Tempo relativo (se toggle attivo)
+        let relText = "";
+        if (this._config.show_relative_time) {
+          const evDate = parseEventDate(ev.start.dateTime || ev.start.date);
+          relText = formatRelativeTime(evDate, undefined, lang);
+        }
+        list.appendChild(mkRow(color, ev.summary || "—", timeStr, locText, descText, mapsUrl, relText));
+      }
+      for (const tk of tasks) {
+        const color = getEntityColor(tk._source, this._config);
+        const descText = this._config.show_description ? sanitizeDescription(tk.description) : "";
+        // Se la scadenza ha un orario (non è mezzanotte), lo mostro
+        const due = parseDueDate(tk.due);
+        let timeStr = "";
+        if (due && (due.getHours() !== 0 || due.getMinutes() !== 0)) {
+          timeStr = fmtTimeFormatted(due.toISOString(), timeFormat, displayLocale);
+        }
+        // Tempo relativo del task (se toggle attivo e ha una scadenza)
+        let relText = "";
+        if (this._config.show_relative_time && due) {
+          relText = formatRelativeTime(due, undefined, lang);
+        }
+        list.appendChild(mkRow(color, tk.summary || tk.uid || "—", timeStr, "", descText, "", relText));
+      }
+    }
+    panel.appendChild(list);
+
+    // Pulsanti: Aggiungi (con data preimpostata) + Chiudi
+    const actions = document.createElement("div");
+    actions.className = "ctc-add-actions";
+    const btnAdd = document.createElement("button");
+    btnAdd.type = "button";
+    btnAdd.className = "ctc-add-btn ctc-add-save";
+    btnAdd.textContent = t("add_event", lang);
+    const btnClose = document.createElement("button");
+    btnClose.type = "button";
+    btnClose.className = "ctc-add-btn ctc-add-cancel";
+    btnClose.textContent = t("add_cancel", lang);
+    actions.append(btnClose, btnAdd);
+    panel.appendChild(actions);
+
+    const close = () => overlay.remove();
+    btnClose.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    // "Aggiungi": chiudo il popup del giorno e apro il form, preimpostando la data
+    btnAdd.addEventListener("click", () => {
+      close();
+      this._openAddEventDialog(date);
+    });
+
+    document.body.appendChild(overlay);
+  }
+
+  /* Selettore mese/anno: due liste a tendina (mese e anno) e un pulsante "Oggi".
+     La navigazione della griglia usa _monthOffset (differenza in mesi da oggi),
+     quindi converto la scelta assoluta mese+anno nell'offset corrispondente. */
+  _openMonthPicker(viewYear, viewMonth, displayLocale, lang) {
+    if (!this._cardElement) return;
+    if (document.getElementById("ctc-add-overlay")) return;
+    if (!document.getElementById("ctc-add-form-styles")) {
+      const st = document.createElement("style");
+      st.id = "ctc-add-form-styles";
+      st.textContent = ADD_FORM_STYLES;
+      document.head.appendChild(st);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.id = "ctc-add-overlay";
+    overlay.className = "ctc-add-overlay";
+    overlay.style.cssText =
+      "position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;";
+    const panel = document.createElement("div");
+    panel.className = "ctc-add-panel";
+    overlay.appendChild(panel);
+
+    const h = document.createElement("div");
+    h.className = "ctc-add-title";
+    h.textContent = t("month_pick", lang);
+    panel.appendChild(h);
+
+    // Stato locale del selettore: l'anno mostrato nella griglia (cambia con le
+    // frecce, non naviga la card finché non si sceglie un mese).
+    let pickerYear = viewYear;
+    const now = new Date();
+
+    // Barra anno: ◀ 2026 ▶
+    const yearBar = document.createElement("div");
+    yearBar.className = "ctc-ypick-bar";
+    const yPrev = document.createElement("button");
+    yPrev.type = "button";
+    yPrev.className = "ctc-month-nav";
+    yPrev.innerHTML = `<ha-icon icon="mdi:chevron-left"></ha-icon>`;
+    const yLabel = document.createElement("div");
+    yLabel.className = "ctc-ypick-year";
+    const yNext = document.createElement("button");
+    yNext.type = "button";
+    yNext.className = "ctc-month-nav";
+    yNext.innerHTML = `<ha-icon icon="mdi:chevron-right"></ha-icon>`;
+    yearBar.append(yPrev, yLabel, yNext);
+    panel.appendChild(yearBar);
+
+    // Griglia dei 12 mesi
+    const mGrid = document.createElement("div");
+    mGrid.className = "ctc-ypick-grid";
+    panel.appendChild(mGrid);
+
+    // Converte mese+anno scelti in _monthOffset e naviga
+    const applyMonth = (year, month0) => {
+      this._monthOffset = (year - now.getFullYear()) * 12 + (month0 - now.getMonth());
+      overlay.remove();
+      this._fetchAll();
+    };
+
+    // (Ri)disegna la griglia dei mesi per l'anno corrente del picker
+    const renderMonths = () => {
+      yLabel.textContent = String(pickerYear);
+      mGrid.innerHTML = "";
+      for (let m = 0; m < 12; m++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ctc-ypick-month";
+        // Nome mese abbreviato localizzato (es. "gen", "feb")
+        const name = new Date(2023, m, 1).toLocaleDateString(displayLocale, { month: "short" });
+        btn.textContent = (name.charAt(0).toUpperCase() + name.slice(1)).replace(".", "");
+        // Evidenzia il mese attualmente visualizzato nella card
+        if (pickerYear === viewYear && m === viewMonth) btn.classList.add("ctc-ypick-current");
+        // Evidenzia il mese reale di oggi
+        if (pickerYear === now.getFullYear() && m === now.getMonth()) btn.classList.add("ctc-ypick-today");
+        btn.addEventListener("click", () => applyMonth(pickerYear, m));
+        mGrid.appendChild(btn);
+      }
+    };
+    yPrev.addEventListener("click", () => { pickerYear--; renderMonths(); });
+    yNext.addEventListener("click", () => { pickerYear++; renderMonths(); });
+    renderMonths();
+
+    // Azioni: solo Oggi · Annulla (la scelta del mese avviene cliccando la griglia)
+    const actions = document.createElement("div");
+    actions.className = "ctc-add-actions ctc-month-picker-actions";
+    const btnToday = document.createElement("button");
+    btnToday.type = "button";
+    btnToday.className = "ctc-add-btn ctc-add-cancel";
+    btnToday.textContent = t("month_today_btn", lang);
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "ctc-add-btn ctc-add-cancel";
+    btnCancel.textContent = t("add_cancel", lang);
+    actions.append(btnToday, btnCancel);
+    panel.appendChild(actions);
+
+    const close = () => overlay.remove();
+    btnCancel.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    btnToday.addEventListener("click", () => {
+      this._monthOffset = 0;
+      close();
+      this._fetchAll();
+    });
+
+    document.body.appendChild(overlay);
   }
 
   /* Applica sfondo trasparente o immagine di sfondo alla ha-card.
@@ -2523,9 +3456,75 @@ class CalendarTasksCard extends HTMLElement {
       shadow.appendChild(cardElement);
       return;
     }
+
+    // Vista a griglia mensile (alternativa all'agenda). Se attiva, riempio il
+    // body con la griglia e salto la costruzione dell'agenda più sotto — ma NON
+    // faccio return: il resto del render (append del body, aggancio degli
+    // handler di header: aggiungi/refresh/collapse) deve comunque eseguire.
+    const monthView = this._config.month_view === true;
+    if (monthView) {
+      body.appendChild(this._buildMonthGrid(displayLocale, firstDayOfWeek, lang, timeFormat));
+    }
     const today = new Date();
     const todayKey = dayKey(today);
     const numDays = this._config.days || 7;
+
+    // Widget meteo di oggi: costruito per ENTRAMBE le viste (agenda e griglia).
+    // Si attacca a cardElement (la ha-card), sopra il body, quindi resta in
+    // cima indipendentemente dalla vista scelta.
+    const weatherEntity = (this._config.show_weather && this._config.weather_entity && this._hass)
+      ? this._hass.states[this._config.weather_entity]
+      : null;
+    if (this._config.show_weather && this._config.show_weather_today && weatherEntity) {
+      const condition = weatherEntity.state; // es. "sunny", "cloudy"
+      const icon = getWeatherIcon(condition);
+      const label = getWeatherLabel(condition, lang);
+      const attrs = weatherEntity.attributes || {};
+      const temp = attrs.temperature;
+      const unit = attrs.temperature_unit || "°";
+      const humidity = attrs.humidity;
+      // Cerca min/max nella forecast del giorno corrente
+      const todayFc = getForecastForDay(this._weatherForecast, today);
+      const tMin = todayFc?.templow != null ? todayFc.templow : null;
+      const tMax = todayFc?.temperature != null ? todayFc.temperature : null;
+      // Costruisce dettagli: "Min 15° · Max 25° · Umidità 60%"
+      const details = [];
+      if (tMin != null) details.push(`${t("weather_min", lang)} ${Math.round(tMin)}${unit}`);
+      if (tMax != null) details.push(`${t("weather_max", lang)} ${Math.round(tMax)}${unit}`);
+      if (humidity != null) details.push(`${t("weather_humidity", lang)} ${Math.round(humidity)}%`);
+      const detailsHtml = details.length > 0 ? `<div class="ctc-weather-today-details">${details.join(" · ")}</div>` : "";
+      const tempStr = temp != null ? `${Math.round(temp)}${unit}` : "";
+      const todayLabel = t("weather_today", lang);
+      // IMPORTANTE: il widget meteo "oggi" va FUORI dal body scrollabile, dentro
+      // la cardElement (ha-card), così rimane sempre visibile sopra la lista
+      // anche quando la scrollbar è attiva. Lo creiamo come elemento DOM e
+      // lo inseriamo subito dopo l'header (e prima del body).
+      const weatherWidget = document.createElement("div");
+      weatherWidget.className = "ctc-weather-today";
+      // Quando compact_mode è attivo, aggiungo la classe sul widget per stile compatto
+      if (this._config.compact_mode === true) {
+        weatherWidget.classList.add("ctc-compact-widget");
+      }
+      weatherWidget.innerHTML = `
+        <ha-icon class="ctc-weather-today-icon" icon="${icon}"></ha-icon>
+        <div class="ctc-weather-today-main">
+          <div class="ctc-weather-today-temp">
+            ${tempStr ? `<span>${tempStr}</span>` : ""}
+            <span class="ctc-wt-condition">${todayLabel} ${label.toLowerCase()}</span>
+          </div>
+          ${detailsHtml}
+        </div>`;
+      // Inserisco prima del body (che è "card" in questo punto): il body è già
+      // stato creato e assegnato a "card", e cardElement è la ha-card vera.
+      // Strategia: appendere il widget a cardElement PRIMA che il body venga
+      // appeso. Ma in questo flusso il body è già appeso? No: viene appeso
+      // alla fine (cardElement.appendChild(card)). Quindi qui appendiamo
+      // il widget a cardElement, e DOPO viene aggiunto il body.
+      this._cardElement.appendChild(weatherWidget);
+    }
+
+    // Tutta la costruzione dell'agenda va saltata in vista griglia mensile.
+    if (!monthView) {
 
     // Funzione condivisa per renderizzare una riga task (attivo o completato)
     const renderTaskRow = (task, done) => {
@@ -2616,56 +3615,6 @@ class CalendarTasksCard extends HTMLElement {
     // Recupera l'entità weather configurata e ne legge stato corrente.
     // Mostra: icona meteo, temperatura attuale, condizione (testo localizzato),
     // min/max della giornata e umidità (se disponibili negli attributi).
-    const weatherEntity = (this._config.show_weather && this._config.weather_entity && this._hass)
-      ? this._hass.states[this._config.weather_entity]
-      : null;
-    if (this._config.show_weather && this._config.show_weather_today && weatherEntity) {
-      const condition = weatherEntity.state; // es. "sunny", "cloudy"
-      const icon = getWeatherIcon(condition);
-      const label = getWeatherLabel(condition, lang);
-      const attrs = weatherEntity.attributes || {};
-      const temp = attrs.temperature;
-      const unit = attrs.temperature_unit || "°";
-      const humidity = attrs.humidity;
-      // Cerca min/max nella forecast del giorno corrente
-      const todayFc = getForecastForDay(this._weatherForecast, today);
-      const tMin = todayFc?.templow != null ? todayFc.templow : null;
-      const tMax = todayFc?.temperature != null ? todayFc.temperature : null;
-      // Costruisce dettagli: "Min 15° · Max 25° · Umidità 60%"
-      const details = [];
-      if (tMin != null) details.push(`${t("weather_min", lang)} ${Math.round(tMin)}${unit}`);
-      if (tMax != null) details.push(`${t("weather_max", lang)} ${Math.round(tMax)}${unit}`);
-      if (humidity != null) details.push(`${t("weather_humidity", lang)} ${Math.round(humidity)}%`);
-      const detailsHtml = details.length > 0 ? `<div class="ctc-weather-today-details">${details.join(" · ")}</div>` : "";
-      const tempStr = temp != null ? `${Math.round(temp)}${unit}` : "";
-      const todayLabel = t("weather_today", lang);
-      // IMPORTANTE: il widget meteo "oggi" va FUORI dal body scrollabile, dentro
-      // la cardElement (ha-card), così rimane sempre visibile sopra la lista
-      // anche quando la scrollbar è attiva. Lo creiamo come elemento DOM e
-      // lo inseriamo subito dopo l'header (e prima del body).
-      const weatherWidget = document.createElement("div");
-      weatherWidget.className = "ctc-weather-today";
-      // Quando compact_mode è attivo, aggiungo la classe sul widget per stile compatto
-      if (this._config.compact_mode === true) {
-        weatherWidget.classList.add("ctc-compact-widget");
-      }
-      weatherWidget.innerHTML = `
-        <ha-icon class="ctc-weather-today-icon" icon="${icon}"></ha-icon>
-        <div class="ctc-weather-today-main">
-          <div class="ctc-weather-today-temp">
-            ${tempStr ? `<span>${tempStr}</span>` : ""}
-            <span class="ctc-wt-condition">${todayLabel} ${label.toLowerCase()}</span>
-          </div>
-          ${detailsHtml}
-        </div>`;
-      // Inserisco prima del body (che è "card" in questo punto): il body è già
-      // stato creato e assegnato a "card", e cardElement è la ha-card vera.
-      // Strategia: appendere il widget a cardElement PRIMA che il body venga
-      // appeso. Ma in questo flusso il body è già appeso? No: viene appeso
-      // alla fine (cardElement.appendChild(card)). Quindi qui appendiamo
-      // il widget a cardElement, e DOPO viene aggiunto il body.
-      this._cardElement.appendChild(weatherWidget);
-    }
 
     // ── Ciclo per giorno: eventi + task ATTIVI con data ──
     for (let i = 0; i < numDays; i++) {
@@ -2927,6 +3876,8 @@ class CalendarTasksCard extends HTMLElement {
       const noEventsText = typeof noEventsFn === "function" ? noEventsFn(numDays) : noEventsFn;
       card.innerHTML += `<div class="ctc-empty">${noEventsText}</div>`;
     }
+
+    } // fine if (!monthView): costruzione agenda
     // Aggiungo il body (con tutto il contenuto accumulato) alla card vera (cardElement)
     // e poi cardElement allo shadow DOM.
     cardElement.appendChild(card);
@@ -2947,17 +3898,27 @@ class CalendarTasksCard extends HTMLElement {
         // Cerco tutti gli elementi "giorno" (.ctc-day-row) nel body
         const dayRows = card.querySelectorAll(".ctc-day-row");
         if (dayRows.length > maxVisible) {
-          // Calcolo l'altezza dei primi N giorni
+          // Calcolo l'altezza dei primi N giorni. Devo includere anche i banner
+          // dei numeri di settimana (.ctc-week-banner) che compaiono TRA i giorni:
+          // senza contarli, l'altezza risulta troppo corta e l'ultimo giorno
+          // visibile viene tagliato quando "Mostra numero settimana" è attivo.
           let totalHeight = 0;
-          for (let i = 0; i < maxVisible; i++) {
-            if (dayRows[i]) {
-              // getBoundingClientRect è più preciso di offsetHeight per misure subpixel
-              totalHeight += dayRows[i].getBoundingClientRect().height;
+          const lastDay = dayRows[maxVisible - 1];
+          // Sommo l'altezza di tutti gli elementi dall'inizio fino all'ultimo
+          // giorno da mostrare compreso: così banner settimana e giorni sono
+          // entrambi conteggiati, nell'ordine reale in cui appaiono.
+          const bodyEl = lastDay ? lastDay.parentElement : null;
+          if (bodyEl) {
+            for (const child of bodyEl.children) {
+              totalHeight += child.getBoundingClientRect().height;
+              if (child === lastDay) break;
+            }
+          } else {
+            // Fallback: solo i giorni (comportamento precedente)
+            for (let i = 0; i < maxVisible; i++) {
+              if (dayRows[i]) totalHeight += dayRows[i].getBoundingClientRect().height;
             }
           }
-          // NO buffer aggiuntivo: con getBoundingClientRect + Math.ceil l'altezza è
-          // già precisa al pixel. Aggiungere un buffer fa "sbordare" il primo
-          // elemento successivo, mostrandone un pezzetto sotto il limite.
           if (totalHeight > 0) {
             // Math.ceil per evitare tagli da arrotondamenti subpixel
             card.style.maxHeight = Math.ceil(totalHeight) + "px";
@@ -3095,6 +4056,12 @@ class CalendarTasksCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    // Propaga l'hass agli ha-form nativi montati nell'editor. Serve perché
+    // set hass può arrivare DOPO il primo render: senza questo, un ha-form
+    // costruito prima che hass fosse disponibile resterebbe vuoto.
+    if (this.shadowRoot) {
+      this.shadowRoot.querySelectorAll("ha-form").forEach((f) => { f.hass = hass; });
+    }
   }
 
   _fire() {
@@ -3637,7 +4604,7 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     // ── General ──
     {
-      const { wrapper, body } = this._makeCollapsible("gen", t("ed_general", lang), false, "mdi:tune");
+      const { wrapper, body } = this._makeCollapsible("header", t("ed_header", lang), false, "mdi:page-layout-header");
 
       body.appendChild(this._makeToggle(t("ed_show_title", lang), this._config.show_title !== false,
         v => { this._config.show_title = v; this._fire(); }));
@@ -3651,6 +4618,25 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowTitle.append(lblTitle, inpTitle);
       body.appendChild(rowTitle);
 
+      body.appendChild(this._makeToggle(t("ed_show_refresh", lang), this._config.show_refresh !== false,
+        v => { this._config.show_refresh = v; this._fire(); }));
+      body.appendChild(this._makeToggle(t("ed_show_add_event", lang), this._config.show_add_event === true,
+        v => { this._config.show_add_event = v; this._fire(); }));
+      body.appendChild(this._makeToggle(t("ed_show_collapse", lang), this._config.show_collapse_button !== false,
+        v => { this._config.show_collapse_button = v; this._fire(); }));
+
+      root.appendChild(wrapper);
+    }
+
+    // ── Layout ──
+    {
+      const { wrapper, body } = this._makeCollapsible("layout", t("ed_layout", lang), false, "mdi:view-dashboard-outline");
+
+      // Vista griglia mensile
+      body.appendChild(this._makeToggle(t("ed_month_view", lang), this._config.month_view === true,
+        v => { this._config.month_view = v; this._fire(); }));
+
+      // Giorni da mostrare (portata dell'agenda)
       const rowDays = document.createElement("div");
       rowDays.className = "field-row";
       const lblDays = document.createElement("label");
@@ -3660,21 +4646,12 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowDays.append(lblDays, inpDays);
       body.appendChild(rowDays);
 
-      body.appendChild(this._makeToggle(t("ed_show_refresh", lang), this._config.show_refresh !== false,
-        v => { this._config.show_refresh = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_add_event", lang), this._config.show_add_event === true,
-        v => { this._config.show_add_event = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_collapse", lang), this._config.show_collapse_button !== false,
-        v => { this._config.show_collapse_button = v; this._fire(); }));
-
       // ── Limit events visible: toggle + numero condizionale ──
       const limitEnabled = this._config.limit_events_visible === true;
-
-      // Creo PRIMA la riga del numero (perché il toggle deve poterla mostrare/nascondere)
       const rowMaxEv = document.createElement("div");
       rowMaxEv.className = "field-row";
       rowMaxEv.style.display = limitEnabled ? "" : "none";
-      rowMaxEv.style.paddingLeft = "16px";  // indentazione visiva
+      rowMaxEv.style.paddingLeft = "16px";
       const lblMaxEv = document.createElement("label");
       lblMaxEv.textContent = t("ed_max_events_visible", lang);
       const inpMaxEv = this._makeInput("inp-maxev", "number",
@@ -3685,73 +4662,35 @@ class CalendarTasksCardEditor extends HTMLElement {
           this._fire();
         });
       rowMaxEv.append(lblMaxEv, inpMaxEv);
-
-      // Poi creo il toggle, che ora può riferirsi a rowMaxEv
       body.appendChild(this._makeToggle(t("ed_limit_events", lang), limitEnabled,
         v => {
           this._config.limit_events_visible = v;
           rowMaxEv.style.display = v ? "" : "none";
           this._fire();
         }));
-
-      // Aggiungo la riga del numero al body (sotto al toggle)
       body.appendChild(rowMaxEv);
 
-      // Compact mode: riduce spazi verticali per card più compatta
+      // Numero settimana
+      body.appendChild(this._makeToggle(t("ed_show_week_number", lang), !!this._config.show_week_number,
+        v => { this._config.show_week_number = v; this._fire(); }));
+      // Giorni vuoti
+      body.appendChild(this._makeToggle(t("ed_show_empty_days", lang), !!this._config.show_empty_days,
+        v => { this._config.show_empty_days = v; this._fire(); }));
+      // Modalità compatta
       body.appendChild(this._makeToggle(t("ed_compact_mode", lang), this._config.compact_mode === true,
         v => { this._config.compact_mode = v; this._fire(); }));
 
       root.appendChild(wrapper);
     }
 
-    // ── Localization ──
+    // ── Dettaglio evento ──
     {
-      const { wrapper, body } = this._makeCollapsible("loc", t("ed_localization", lang), false, "mdi:translate");
+      const { wrapper, body } = this._makeCollapsible("eventdetail", t("ed_event_detail", lang), false, "mdi:eye");
 
-      body.appendChild(this._makeSelect("Language",
-        this._config.language || "auto",
-        [
-          { value: "auto", text: "System default" },
-          { value: "it", text: "Italiano" },
-          { value: "en", text: "English" },
-          { value: "de", text: "Deutsch" },
-        ],
-        v => { this._config.language = v; this._fire(); }));
-
-      body.appendChild(this._makeSelect("Time format",
-        this._config.time_format || "auto",
-        [
-          { value: "auto", text: "System default" },
-          { value: "24h", text: "24 hours (13:30)" },
-          { value: "12h", text: "12 hours (1:30 PM)" },
-        ],
-        v => { this._config.time_format = v; this._fire(); }));
-
-      body.appendChild(this._makeSelect("First day of the week",
-        this._config.first_day_of_week || "auto",
-        [
-          { value: "auto", text: "System default" },
-          { value: "monday", text: "Monday" },
-          { value: "sunday", text: "Sunday" },
-          { value: "saturday", text: "Saturday" },
-        ],
-        v => { this._config.first_day_of_week = v; this._fire(); }));
-
-      root.appendChild(wrapper);
-    }
-
-    // ── Display ──
-    {
-      const { wrapper, body } = this._makeCollapsible("display", t("ed_display", lang), false, "mdi:eye");
-
-      body.appendChild(this._makeToggle(t("ed_show_week_number", lang), !!this._config.show_week_number,
-        v => { this._config.show_week_number = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_end_time", lang), !!this._config.show_end_time,
         v => { this._config.show_end_time = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_multi_day_events", lang), this._config.multi_day_events !== false,
         v => { this._config.multi_day_events = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_empty_days", lang), !!this._config.show_empty_days,
-        v => { this._config.show_empty_days = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_relative_time", lang), this._config.show_relative_time !== false,
         v => { this._config.show_relative_time = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_source", lang), !!this._config.show_source,
@@ -3762,6 +4701,41 @@ class CalendarTasksCardEditor extends HTMLElement {
         v => { this._config.show_location = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_location_clickable", lang), !!this._config.location_clickable,
         v => { this._config.location_clickable = v; this._fire(); }));
+
+      root.appendChild(wrapper);
+    }
+    {
+      const { wrapper, body } = this._makeCollapsible("loc", t("ed_localization", lang), false, "mdi:translate");
+
+      body.appendChild(this._makeSelect(t("ed_lang_label", lang),
+        this._config.language || "auto",
+        [
+          { value: "auto", text: "System default" },
+          { value: "it", text: "Italiano" },
+          { value: "en", text: "English" },
+          { value: "de", text: "Deutsch" },
+          { value: "fr", text: "Français" },
+        ],
+        v => { this._config.language = v; this._fire(); }));
+
+      body.appendChild(this._makeSelect(t("ed_time_format", lang),
+        this._config.time_format || "auto",
+        [
+          { value: "auto", text: "System default" },
+          { value: "24h", text: "24 hours (13:30)" },
+          { value: "12h", text: "12 hours (1:30 PM)" },
+        ],
+        v => { this._config.time_format = v; this._fire(); }));
+
+      body.appendChild(this._makeSelect(t("ed_first_day", lang),
+        this._config.first_day_of_week || "auto",
+        [
+          { value: "auto", text: "System default" },
+          { value: "monday", text: "Monday" },
+          { value: "sunday", text: "Sunday" },
+          { value: "saturday", text: "Saturday" },
+        ],
+        v => { this._config.first_day_of_week = v; this._fire(); }));
 
       root.appendChild(wrapper);
     }
