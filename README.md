@@ -42,15 +42,6 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 ## 📸 Screenshots
 
-### 🗓️ Monthly grid view
-![Monthly grid view](screenshots/06-month-view.jpeg)
-
-<table>
-<tr>
-<td width="50%"><b>📅 Month picker</b><br><img src="screenshots/07-month-picker.jpeg" width="100%"></td>
-<td width="50%"><b>📋 Day popup</b><br><img src="screenshots/08-day-popup.jpeg" width="100%"></td>
-</tr>
-</table>
 
 <table>
 <tr>
@@ -65,6 +56,13 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 <td width="50%"><b>📋 Clean agenda view</b><br><img src="screenshots/05-agenda-view.jpeg" width="100%"></td>
 <td width="50%"><b>☀️ Weather support</b><br><img src="screenshots/06-weather-support.jpeg" width="100%"></td>
 </tr>
+<tr>
+<td width="50%"><b>📅 Month picker</b><br><img src="screenshots/06-month-view.jpeg" width="100%"></td>
+<td width="50%"><b>📅 Monthly grid view</b><br><img src="screenshots/07-month-picker.jpeg" width="100%"></td>  
+</tr>  
+<tr>
+<td width="50%"><b>📋 Day popup</b><br><img src="screenshots/08-day-popup.jpeg" width="100%"></td>
+</tr>  
 </table>
 
 Display weather information from any HA `weather.*` entity with two independent options:
