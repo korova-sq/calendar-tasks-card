@@ -23,3 +23,5 @@ A unified agenda view for Home Assistant that combines calendar events and todo 
 3. Add the card to your dashboard and configure via the visual editor
 
 See the [README](https://github.com/korova-sq/calendar-tasks-card) for full documentation.
+
+☕ [Buy me a coffee](https://buymeacoffee.com/korova.sq) if you enjoy this card!
