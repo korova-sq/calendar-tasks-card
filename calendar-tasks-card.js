@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.8.0
+ * calendar-tasks-card v1.8.1
  */
 
-const CARD_VERSION = "1.8.0";
+const CARD_VERSION = "1.8.1";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
