@@ -51,24 +51,24 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 <table align="center">
 <tr>
-<td align="center" width="50%"><b>Main view with overdue and completed</b><br><img src="screenshots/01-overview.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>🎨 Color picker in the editor</b><br><img src="screenshots/02-editor-colors.jpeg" width="100%" /></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/01-overview.jpeg" width="100%" /><br><b>Main view with overdue and completed</b></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/02-editor-colors.jpeg" width="100%" /><br><b>🎨 Color picker in the editor</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>⚙️ Editor sections</b><br><img src="screenshots/03-editor-sections.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>📆 Week numbers</b><br><img src="screenshots/04-week-numbers.jpeg" width="100%" /></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/03-editor-sections.jpeg" width="100%" /><br><b>⚙️ Editor sections</b></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/04-week-numbers.jpeg" width="100%" /><br><b>📆 Week numbers</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>📋 Clean agenda view</b><br><img src="screenshots/05-agenda-view.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>☀️ Weather support</b><br><img src="screenshots/06-weather-support.jpeg" width="100%" /></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/05-agenda-view.jpeg" width="100%" /><br><b>📋 Clean agenda view</b></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/06-weather-support.jpeg" width="100%" /><br><b>☀️ Weather support</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>📅 Month view</b><br><img src="screenshots/06-month-view.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>📅 Month picker</b><br><img src="screenshots/07-month-picker.jpeg" width="100%" /></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/06-month-view.jpeg" width="100%" /><br><b>📅 Month view</b></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/07-month-picker.jpeg" width="100%" /><br><b>📅 Month picker</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>📋 Day popup</b><br><img src="screenshots/08-day-popup.jpeg" width="100%" /></td>
-<td align="center" width="50%"></td>
+<td align="center" width="50%" valign="top"><img src="screenshots/08-day-popup.jpeg" width="100%" /><br><b>📋 Day popup</b></td>
+<td width="50%"></td>
 </tr>
 </table>
 
