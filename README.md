@@ -24,20 +24,23 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 🛠 **Visual editor** for all options (no YAML editing required)
 - 📅 **Unified view**: events and tasks in one timeline, sorted by date
 - 🗓️ **Monthly grid view**: switch to a classic month calendar with event dots, tap-a-day popup, and month navigation
+- 🔀 **View switch button**: a header button to flip between agenda and month view without opening the editor (session-only, reverts to the default on reload)
 - 🎨 **Color picker**: 12-color palette per entity, auto-assigned when unset
 - ✅ **Task completion**: tick tasks directly from the card
 - 🚨 **Overdue section**: tasks past their deadline highlighted in red
-- 📋 **No Date section**: active tasks without a due date
+- 📋 **No Date section**: active tasks without a due date (can be hidden)
 - 🗂 **Completed section**: recently finished tasks for context
 - ⏱ **Relative time**: "Tomorrow", "In 3 days", "Yesterday", "1 week overdue"
 - 🗓 **Multi-day events**: events spanning several days appear on each one, with a day counter
 - 📍 **Event location**: shows the location of calendar events with optional click-to-maps
+- 📅 **Current date in header**: optionally show today's localised date under the title
 - 📆 **Week numbers**: ISO 8601 week separators (toggle on/off)
 - 🔽 **Collapsible**: hide everything with one click, state persists
 - 📋 **Max events visible**: optionally limit visible events with a smooth internal scrollbar
 - 📏 **Compact mode**: reduced spacing option for tighter layouts
 - ☀️ **Weather support**: optional today's weather widget and per-day forecast
 - 🖼 **Custom background**: transparent mode or background image with a light/dark overlay
+- 🎨 **card-mod support**: style the card with [card-mod](https://github.com/thomasloven/lovelace-card-mod)
 - ➕ **Add event/task**: inline form to create calendar events and todo tasks without leaving the card
 - 🔍 **Exclude filter**: hide events and tasks with specific keywords in their titles
 - 🔄 **Force refresh**: button to update all integrations on demand
@@ -51,24 +54,24 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 <table align="center">
 <tr>
-<td align="center" width="50%" valign="top"><img src="screenshots/01-overview.jpeg" width="100%" /><br><b>Main view with overdue and completed</b></td>
-<td align="center" width="50%" valign="top"><img src="screenshots/02-editor-colors.jpeg" width="100%" /><br><b>🎨 Color picker in the editor</b></td>
+<td align="center" width="50%"><b>Main view with overdue and completed</b><br><img src="screenshots/01-overview.jpeg" width="100%" /></td>
+<td align="center" width="50%"><b>🎨 Color picker in the editor</b><br><img src="screenshots/02-editor-colors.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%" valign="top"><img src="screenshots/03-editor-sections.jpeg" width="100%" /><br><b>⚙️ Editor sections</b></td>
-<td align="center" width="50%" valign="top"><img src="screenshots/04-week-numbers.jpeg" width="100%" /><br><b>📆 Week numbers</b></td>
+<td align="center" width="50%"><b>⚙️ Editor sections</b><br><img src="screenshots/03-editor-sections.jpeg" width="100%" /></td>
+<td align="center" width="50%"><b>📆 Week numbers</b><br><img src="screenshots/04-week-numbers.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%" valign="top"><img src="screenshots/05-agenda-view.jpeg" width="100%" /><br><b>📋 Clean agenda view</b></td>
-<td align="center" width="50%" valign="top"><img src="screenshots/06-weather-support.jpeg" width="100%" /><br><b>☀️ Weather support</b></td>
+<td align="center" width="50%"><b>📋 Clean agenda view</b><br><img src="screenshots/05-agenda-view.jpeg" width="100%" /></td>
+<td align="center" width="50%"><b>☀️ Weather support</b><br><img src="screenshots/06-weather-support.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%" valign="top"><img src="screenshots/06-month-view.jpeg" width="100%" /><br><b>📅 Month view</b></td>
-<td align="center" width="50%" valign="top"><img src="screenshots/07-month-picker.jpeg" width="100%" /><br><b>📅 Month picker</b></td>
+<td align="center" width="50%"><b>📅 Month view</b><br><img src="screenshots/06-month-view.jpeg" width="100%" /></td>
+<td align="center" width="50%"><b>📅 Month picker</b><br><img src="screenshots/07-month-picker.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%" valign="top"><img src="screenshots/08-day-popup.jpeg" width="100%" /><br><b>📋 Day popup</b></td>
-<td width="50%"></td>
+<td align="center" width="50%"><b>📋 Day popup</b><br><img src="screenshots/08-day-popup.jpeg" width="100%" /></td>
+<td align="center" width="50%"></td>
 </tr>
 </table>
 
@@ -139,9 +142,11 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 |---|---|---|
 | `title` | `Agenda` | Card title |
 | `show_title` | `true` | Show the title bar |
+| `show_current_date` | `false` | Show today's date as a subtitle under the title, localised to the card language |
 | `days` | `7` | Days to look ahead |
 | `show_refresh` | `true` | Show 🔄 refresh button |
 | `show_add_event` | `false` | Show ➕ button in the header to add events/tasks (see below) |
+| `show_view_switch` | `false` | Show a header button to switch between agenda and month view (session-only; the editor's `month_view` toggle sets the persistent default) |
 | `show_collapse_button` | `true` | Show ▲ collapse button |
 | `limit_events_visible` | `false` | Enable scrollbar to limit visible events |
 | `max_events_visible` | `3` | Number of events visible when `limit_events_visible` is true |
@@ -197,9 +202,32 @@ When `show_add_event` is enabled, a button appears in the header that opens an i
 
 The button only appears if at least one calendar or todo list is configured. The form uses Home Assistant's official `calendar.create_event` and `todo.add_item` services, so creating events only works for calendars that support it (e.g. Local Calendar, CalDAV) — read-only calendars won't accept new events. Recurring events aren't supported, since the underlying service doesn't offer it; create those from the Calendar tab as usual.
 
+### 🔀 View switch button
+
+When `show_view_switch` is enabled, a button appears in the header to switch between the agenda list and the monthly grid. The `month_view` toggle in the editor sets the **default** view; the button changes the view for the current session only and reverts to the default when the page reloads. This keeps the editor as the single source of truth for the persistent default, so users who don't enable the button can still choose the view.
+
+### 🎨 card-mod
+
+The card supports [card-mod](https://github.com/thomasloven/lovelace-card-mod). Add a `card_mod:` block to the card config to apply custom CSS. Styles are re-applied after every render, so they survive refreshes and view changes.
+
+```yaml
+type: custom:calendar-tasks-card
+calendars:
+  - calendar.family
+card_mod:
+  style: |
+    ha-card {
+      border: 2px solid var(--primary-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+```
+
+card-mod must be installed separately (via HACS). If it isn't installed, the `card_mod` block is simply ignored.
+
 ### ✅ Tasks
 | Option | Default | Description |
 |---|---|---|
+| `show_no_date` | `true` | Show the "No Date" section (active tasks without a due date); set to `false` to hide it |
 | `show_overdue` | `true` | Show Overdue section |
 | `overdue_days` | `0` | Limit overdue (0 = all) |
 | `show_completed` | `true` | Show Completed section |

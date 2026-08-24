@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.8.1
+ * calendar-tasks-card v1.9.0
  */
 
-const CARD_VERSION = "1.8.1";
+const CARD_VERSION = "1.9.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -30,6 +30,8 @@ const DEFAULT_ACTION = { action: "none" };
 const DEFAULT_CONFIG = {
   title: "Agenda",
   show_title: true,
+  show_current_date: false,
+  show_view_switch: false,        // mostra un pulsante nell'header per alternare agenda ↔ vista mese
   show_refresh: true,
   show_add_event: false,          // mostra un pulsante nell'header che apre il dialog nativo di HA per creare un evento
   days: 7,
@@ -41,6 +43,7 @@ const DEFAULT_CONFIG = {
   location_clickable: false,
   show_completed: true,
   completed_days: 7,
+  show_no_date: true,
   show_overdue: true,
   overdue_days: 0,
   allow_complete: false,
@@ -178,16 +181,30 @@ const STYLES = `
     gap: 8px;
     min-height: 36px;
   }
+  .ctc-title-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
   .ctc-title {
     font-size: 14px;
     font-weight: 500;
     color: var(--ctc-text);
     letter-spacing: 0.02em;
-    flex: 1;
     min-width: 0;
     display: flex;
     align-items: center;
     line-height: 1;
+  }
+  .ctc-current-date {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ctc-hint);
+    line-height: 1.1;
+    letter-spacing: 0.01em;
   }
   .ctc-actions { display: flex; gap: 4px; }
   .ctc-icon-btn { background: none; border: none; cursor: pointer; color: var(--ctc-hint); padding: 4px; border-radius: 4px; display: flex; align-items: center; transition: background 0.15s; --mdc-icon-size: 18px; }
@@ -1443,6 +1460,8 @@ const I18N = {
     ed_days_to_show: "Giorni da mostrare",
     ed_max_events_visible: "Numero massimo eventi visibili",
     ed_show_title: "Mostra titolo",
+    ed_show_current_date: "Mostra data corrente",
+    ed_show_view_switch: "Mostra pulsante cambia vista",
     ed_show_refresh: "Mostra pulsante refresh",
     ed_show_add_event: "Mostra pulsante aggiungi evento",
     add_event: "Aggiungi evento",
@@ -1495,6 +1514,7 @@ const I18N = {
     ed_show_weather: "Mostra meteo",
     ed_show_weather_today: "Mostra meteo di oggi (widget in alto)",
     ed_show_weather_per_day: "Mostra meteo per giorno (accanto alla data)",
+    ed_show_no_date: "Mostra task senza data",
     ed_show_overdue: "Mostra task scaduti",
     ed_overdue_days: "Giorni scaduti da mostrare (0 = tutti)",
     ed_completed_days: "Giorni completati da mostrare",
@@ -1522,6 +1542,8 @@ const I18N = {
     collapse_all: "Comprimi tutto",
     expand_all: "Espandi tutto",
     refresh: "Aggiorna",
+    switch_to_month: "Vista mese",
+    switch_to_agenda: "Vista agenda",
     days_missing_one: "Manca un giorno",
     days_missing_n: (n) => `Mancano ${n} giorni`,
     week_missing_one: "Manca una settimana",
@@ -1586,6 +1608,8 @@ const I18N = {
     ed_days_to_show: "Days to show",
     ed_max_events_visible: "Max events visible",
     ed_show_title: "Show title",
+    ed_show_current_date: "Show current date",
+    ed_show_view_switch: "Show view switch button",
     ed_show_refresh: "Show refresh button",
     ed_show_add_event: "Show add event button",
     add_event: "Add event",
@@ -1638,6 +1662,7 @@ const I18N = {
     ed_show_weather: "Show weather",
     ed_show_weather_today: "Show today's weather (top widget)",
     ed_show_weather_per_day: "Show weather per day (next to date)",
+    ed_show_no_date: "Show tasks without a date",
     ed_show_overdue: "Show overdue tasks",
     ed_overdue_days: "Overdue days to show (0 = all)",
     ed_completed_days: "Completed days to show",
@@ -1665,6 +1690,8 @@ const I18N = {
     collapse_all: "Collapse all",
     expand_all: "Expand all",
     refresh: "Refresh",
+    switch_to_month: "Month view",
+    switch_to_agenda: "Agenda view",
     days_missing_one: "In 1 day",
     days_missing_n: (n) => `In ${n} days`,
     week_missing_one: "In 1 week",
@@ -1730,6 +1757,8 @@ const I18N = {
     ed_days_to_show: "Tage anzeigen",
     ed_max_events_visible: "Max Ereignisse",
     ed_show_title: "Titel anzeigen",
+    ed_show_current_date: "Aktuelles Datum anzeigen",
+    ed_show_view_switch: "Ansichtswechsel-Button anzeigen",
     ed_show_refresh: "Neu laden anzeigen",
     ed_show_add_event: "Ereignis-Button anzeigen",
     add_event: "Ereignis hinzufügen",
@@ -1782,6 +1811,7 @@ const I18N = {
     ed_show_weather: "Zeige Wetter",
     ed_show_weather_today: "Zeige heutiges Wetter",
     ed_show_weather_per_day: "Zeige Wetterbericht (nächste Tage)",
+    ed_show_no_date: "Zeige Aufgaben ohne Datum",
     ed_show_overdue: "Zeige überfällige Aufgaben",
     ed_overdue_days: "Überfällig anzeigen für X Tage (0 = Alle)",
     ed_completed_days: "Erledigte Tage anzeigen",
@@ -1809,6 +1839,8 @@ const I18N = {
     collapse_all: "Alle einklappen",
     expand_all: "Alle ausklappen",
     refresh: "Neu laden",
+    switch_to_month: "Monatsansicht",
+    switch_to_agenda: "Agenda-Ansicht",
     days_missing_one: "In 1 Tag",
     days_missing_n: (n) => `In ${n} Tagen`,
     week_missing_one: "In 1 Woche",
@@ -1874,6 +1906,8 @@ const I18N = {
     ed_days_to_show: "Jours à afficher",
     ed_max_events_visible: "Nombre max d'événements visibles",
     ed_show_title: "Afficher le titre",
+    ed_show_current_date: "Afficher la date du jour",
+    ed_show_view_switch: "Afficher le bouton de changement de vue",
     ed_show_refresh: "Afficher le bouton actualiser",
     ed_show_add_event: "Afficher le bouton ajouter",
     add_event: "Ajouter un événement",
@@ -1926,6 +1960,7 @@ const I18N = {
     ed_show_weather: "Afficher la météo",
     ed_show_weather_today: "Afficher la météo du jour (widget en haut)",
     ed_show_weather_per_day: "Afficher la météo par jour (à côté de la date)",
+    ed_show_no_date: "Afficher les tâches sans date",
     ed_show_overdue: "Afficher les tâches en retard",
     ed_overdue_days: "Jours de retard à afficher (0 = tous)",
     ed_completed_days: "Jours terminés à afficher",
@@ -1953,6 +1988,8 @@ const I18N = {
     collapse_all: "Tout réduire",
     expand_all: "Tout développer",
     refresh: "Actualiser",
+    switch_to_month: "Vue mois",
+    switch_to_agenda: "Vue agenda",
     days_missing_one: "Dans 1 jour",
     days_missing_n: (n) => `Dans ${n} jours`,
     week_missing_one: "Dans 1 semaine",
@@ -2350,11 +2387,17 @@ class CalendarTasksCard extends HTMLElement {
     // Salva i valori precedenti che ci servono per decidere se refetchare il forecast
     const prevWeatherEntity = this._config?.weather_entity;
     const prevPerDay = this._config?.show_weather_per_day;
+    const prevMonthView = this._config?.month_view;
     this._config = {
       ...DEFAULT_CONFIG,
       calendars: [], todos: [],
       ...config,
     };
+    // Se il default della vista è cambiato (es. toggle nell'editor), azzero
+    // l'override di sessione così il nuovo default vince subito.
+    if (this._config.month_view !== prevMonthView) {
+      this._viewOverride = undefined;
+    }
     // Sanitizza calendars e todos: scarta righe vuote o malformate.
     // Protegge da YAML scritti a mano e da "Aggiungi" lasciati incompiuti.
     if (Array.isArray(this._config.calendars)) {
@@ -2454,7 +2497,7 @@ class CalendarTasksCard extends HTMLElement {
     //   primi `days` giorni.
     let start = new Date();
     let end = new Date();
-    if (this._config.month_view === true) {
+    if (this._resolveMonthView()) {
       const hassLanguage = this._hass?.locale?.language || this._hass?.language || null;
       const dispLocale = this._config.language && this._config.language !== "auto"
         ? this._config.language
@@ -3317,6 +3360,33 @@ class CalendarTasksCard extends HTMLElement {
      Logica identica alla sun-weather-card, per coerenza tra le due card.
      Immagine e trasparenza sono mutuamente esclusive: se c'è un'immagine,
      ha la precedenza e la trasparenza viene ignorata. */
+  // Supporto card-mod: la card ricostruisce lo shadow DOM ad ogni _render(),
+  // il che cancella gli stili che card-mod aveva applicato. Per farlo funzionare,
+  // dopo ogni render ri-applichiamo card-mod tramite l'API ufficiale
+  // `applyToElement` (se card-mod è installato). Passiamo l'host della card
+  // (`this`) con shadow=true: card-mod inietta lo <style> nello shadow root
+  // della card, dove vive la <ha-card>, così un selettore `ha-card { }` (il caso
+  // tipico) funziona come su una card standard.
+  _applyCardMod() {
+    const cfg = this._config && this._config.card_mod;
+    if (!cfg) return;
+    if (!window.customElements || !customElements.whenDefined) return;
+    customElements.whenDefined("card-mod").then((cardMod) => {
+      try {
+        cardMod.applyToElement(
+          this,                       // host della card (lo shadow contiene la ha-card)
+          "card",                     // tipo: variabili di tema card-mod-card
+          cfg,                        // { style, class, debug }
+          { config: this._config },   // variabili per i template jinja
+          true,                       // shadow: inietta nello shadow root dell'host
+          "type-custom-calendar-tasks-card"
+        );
+      } catch (e) {
+        // Versioni molto vecchie di card-mod con API diversa: ignora senza rompere
+      }
+    }).catch(() => { /* card-mod non installato: nessun problema */ });
+  }
+
   _applyBackground(cardEl) {
     if (!cardEl) return;
     const bg = this._config.background_image;
@@ -3466,6 +3536,19 @@ class CalendarTasksCard extends HTMLElement {
     }
   }
 
+  // Risolve la vista EFFETTIVA (agenda vs griglia mensile).
+  // Comportamento "sessione" (come Atomic Calendar Revive): il default è quello
+  // di config (impostato dall'editor); il bottone nell'header cambia la vista
+  // solo per la sessione corrente (variabile in memoria `_viewOverride`), senza
+  // persistere. Alla ricostruzione della card (ricarica pagina, cambio scheda)
+  // si torna al default. Nessuno storage, una sola fonte di verità = niente
+  // casi limite.
+  _resolveMonthView() {
+    if (this._viewOverride === true) return true;
+    if (this._viewOverride === false) return false;
+    return this._config.month_view === true;
+  }
+
   _render() {
     const shadow = this.shadowRoot;
     shadow.innerHTML = "";
@@ -3500,6 +3583,16 @@ class CalendarTasksCard extends HTMLElement {
     const showRefreshBtn = this._config.show_refresh !== false;
     const showCollapseBtn = !!this._config.show_collapse_button;
     let headerActions = "";
+    // Pulsante "Cambia vista": alterna agenda ↔ griglia mensile senza passare
+    // dall'editor. La scelta è per-dispositivo (localStorage) e persiste.
+    const showViewSwitch = this._config.show_view_switch === true;
+    if (showViewSwitch) {
+      const inMonth = this._resolveMonthView();
+      // Mostra l'icona della vista verso cui si passa
+      const switchIcon = inMonth ? "mdi:view-agenda-outline" : "mdi:calendar-month-outline";
+      const switchTitle = inMonth ? t("switch_to_agenda", lang) : t("switch_to_month", lang);
+      headerActions += `<button class="ctc-header-btn" id="ctc-view-switch" title="${switchTitle}"><ha-icon icon="${switchIcon}"></ha-icon></button>`;
+    }
     // Pulsante "Aggiungi": apre un form inline per creare un evento o un task.
     // Mostrato solo se attivato E se c'è almeno un calendario o una lista todo
     // (senza nessuno dei due non avrebbe dove creare).
@@ -3518,10 +3611,24 @@ class CalendarTasksCard extends HTMLElement {
 
     // Header: titolo + pulsanti. Se né titolo né pulsanti sono attivi, niente header.
     const titleText = this._config.title || t("agenda", lang);
-    const hasHeader = this._config.show_title !== false || headerActions;
+    // Data corrente (opzionale, sotto il titolo). Segue la lingua/locale della card.
+    const showCurrentDate = this._config.show_current_date === true;
+    let currentDateHtml = "";
+    if (showCurrentDate) {
+      const todayStr = new Date().toLocaleDateString(displayLocale, {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+      // Prima lettera maiuscola (alcuni locale danno il giorno minuscolo)
+      const todayStrCap = todayStr.charAt(0).toUpperCase() + todayStr.slice(1);
+      currentDateHtml = `<span class="ctc-current-date">${todayStrCap}</span>`;
+    }
+    const hasHeader = this._config.show_title !== false || showCurrentDate || headerActions;
     const headerHtml = hasHeader ? `
       <div class="ctc-header">
-        <span class="ctc-title">${this._config.show_title !== false ? titleText : ""}</span>
+        <span class="ctc-title-wrap">
+          ${this._config.show_title !== false ? `<span class="ctc-title">${titleText}</span>` : ""}
+          ${currentDateHtml}
+        </span>
         ${headerActions ? `<span class="ctc-header-actions">${headerActions}</span>` : ""}
       </div>` : "";
 
@@ -3546,6 +3653,8 @@ class CalendarTasksCard extends HTMLElement {
     // Sfondo trasparente / immagine di sfondo (applicato prima del contenuto,
     // così vale anche nello stato di caricamento e quando la card è collassata)
     this._applyBackground(cardElement);
+    // Ri-applica card-mod (se installato) dopo la ricostruzione dello shadow DOM.
+    this._applyCardMod();
 
     if (this._loading) {
       card.innerHTML += `<div class="ctc-loading"><ha-circular-progress active size="small"></ha-circular-progress></div>`;
@@ -3558,7 +3667,7 @@ class CalendarTasksCard extends HTMLElement {
     // body con la griglia e salto la costruzione dell'agenda più sotto — ma NON
     // faccio return: il resto del render (append del body, aggancio degli
     // handler di header: aggiungi/refresh/collapse) deve comunque eseguire.
-    const monthView = this._config.month_view === true;
+    const monthView = this._resolveMonthView();
     if (monthView) {
       body.appendChild(this._buildMonthGrid(displayLocale, firstDayOfWeek, lang, timeFormat));
     }
@@ -3894,7 +4003,7 @@ class CalendarTasksCard extends HTMLElement {
     // ── Sezione globale: task ATTIVI senza data ──
     // Mostrati PRIMA degli scaduti perché sono task ancora "da fare" senza urgenza
     // temporale, mentre gli scaduti sono in stato critico.
-    if (undatedActive.length > 0) {
+    if (this._config.show_no_date !== false && undatedActive.length > 0) {
       hasContent = true;
       const undatedGroups = new Map();
       undatedActive.forEach(task => {
@@ -4076,6 +4185,22 @@ class CalendarTasksCard extends HTMLElement {
       });
     }
 
+    // ── Bottone cambia vista (agenda ↔ mese) ──
+    const viewSwitchBtn = shadow.getElementById("ctc-view-switch");
+    if (viewSwitchBtn) {
+      viewSwitchBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+      viewSwitchBtn.addEventListener("pointerup", (e) => e.stopPropagation());
+      viewSwitchBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // Cambio vista solo per la sessione corrente (non persiste): imposta
+        // l'override in memoria, resetta il mese e rifà il fetch (_fetchAll
+        // richiama _render() al termine).
+        this._viewOverride = !this._resolveMonthView();
+        this._monthOffset = 0;
+        this._fetchAll();
+      });
+    }
+
     // ── Checkbox task: toggle completato ──
     if (this._config.allow_complete !== false) {
       shadow.querySelectorAll(".ctc-task-checkbox").forEach(cb => {
@@ -4243,6 +4368,12 @@ class CalendarTasksCardEditor extends HTMLElement {
     } else if (typeof config.exclude === "string" && config.exclude.trim().length > 0) {
       // Supporto anche stringa singola (per chi configura da YAML)
       result.exclude = [config.exclude.trim()];
+    }
+
+    // card_mod: non è un'opzione della card ma va preservata nel YAML, altrimenti
+    // gli stili di card-mod verrebbero persi al salvataggio dall'editor.
+    if (config.card_mod !== undefined) {
+      result.card_mod = config.card_mod;
     }
 
     return result;
@@ -4729,12 +4860,17 @@ class CalendarTasksCardEditor extends HTMLElement {
       rowTitle.append(lblTitle, inpTitle);
       body.appendChild(rowTitle);
 
+      body.appendChild(this._makeToggle(t("ed_show_current_date", lang), this._config.show_current_date === true,
+        v => { this._config.show_current_date = v; this._fire(); }));
+
       body.appendChild(this._makeToggle(t("ed_show_refresh", lang), this._config.show_refresh !== false,
         v => { this._config.show_refresh = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_add_event", lang), this._config.show_add_event === true,
         v => { this._config.show_add_event = v; this._fire(); }));
       body.appendChild(this._makeToggle(t("ed_show_collapse", lang), this._config.show_collapse_button !== false,
         v => { this._config.show_collapse_button = v; this._fire(); }));
+      body.appendChild(this._makeToggle(t("ed_show_view_switch", lang), this._config.show_view_switch === true,
+        v => { this._config.show_view_switch = v; this._fire(); }));
 
       root.appendChild(wrapper);
     }
@@ -4743,7 +4879,8 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("layout", t("ed_layout", lang), false, "mdi:view-dashboard-outline");
 
-      // Vista griglia mensile
+      // Vista griglia mensile (default della card; il bottone nell'header, se
+      // attivo, può cambiarla temporaneamente per la sessione).
       body.appendChild(this._makeToggle(t("ed_month_view", lang), this._config.month_view === true,
         v => { this._config.month_view = v; this._fire(); }));
 
@@ -5015,6 +5152,9 @@ class CalendarTasksCardEditor extends HTMLElement {
     // ── Tasks ──
     {
       const { wrapper, body } = this._makeCollapsible("tasks", t("ed_tasks", lang), false, "mdi:checkbox-marked-circle-outline");
+
+      body.appendChild(this._makeToggle(t("ed_show_no_date", lang), this._config.show_no_date !== false,
+        v => { this._config.show_no_date = v; this._fire(); }));
 
       body.appendChild(this._makeToggle(t("ed_show_overdue", lang), this._config.show_overdue !== false,
         v => { this._config.show_overdue = v; this._fire(); }));

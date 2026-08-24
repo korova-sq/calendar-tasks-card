@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-08-24
+
+### Added
+
+- **View switch button**: a new header button (toggle: `show_view_switch`)
+  lets you switch between the agenda list and the monthly grid without opening
+  the editor. The icon reflects the view you'll switch to. The editor's
+  `month_view` toggle sets the default; the button changes the view for the
+  current session only and reverts to the default on reload (same behaviour as
+  other calendar cards). Requested by [@JourMic](https://github.com/JourMic)
+  (issue [#9](https://github.com/korova-sq/calendar-tasks-card/issues/9)).
+- **Current date in header**: a new `show_current_date` option shows today's
+  date as a subtitle under the card title, localised to the card language
+  (e.g. "Domenica 23 agosto 2026"). Works even when the title is hidden.
+  Requested by MasterTim17
+  (issue [#11](https://github.com/korova-sq/calendar-tasks-card/issues/11)).
+- **Hide "No Date" section**: a new `show_no_date` option (default `true`) in
+  the Tasks section lets you hide the "No Date" section, matching the existing
+  `show_overdue` / `show_completed` toggles. Useful when an external todo
+  source syncs a large backlog of undated tasks. Requested by
+  registrierungstrash-svg
+  (issue [#10](https://github.com/korova-sq/calendar-tasks-card/issues/10)).
+- **card-mod support**: the card now works with
+  [card-mod](https://github.com/thomasloven/lovelace-card-mod). A `card_mod:`
+  block in the card config is applied to the card and re-applied after every
+  render, so custom styles (e.g. `ha-card { … }`) persist through refreshes and
+  view changes. Requested by [@JourMic](https://github.com/JourMic)
+  (issue [#8](https://github.com/korova-sq/calendar-tasks-card/issues/8)).
+
+### Notes
+
+- All new options default to off, except `show_no_date`, which defaults to on
+  to preserve the current behaviour — so existing setups look exactly as before.
+- The view switch is a session-only change by design: the editor toggle remains
+  the way to set a persistent default, so users who don't enable the button can
+  still choose the view.
+- card-mod must be installed separately; if it isn't, the `card_mod` block is
+  simply ignored.
+
+### Credits
+
+- Thanks to [@JourMic](https://github.com/JourMic), MasterTim17 and
+  registrierungstrash-svg for the feature requests that shaped this release.
+
+[1.9.0]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.9.0
+
+## [1.8.1] - 2026-XX-XX
+
+### Fixed
+
+- **HACS update pickup**: republished as a patch release so HACS reliably picks
+  up the French weather-label refinements merged after 1.8.0
+  (PR [#7](https://github.com/korova-sq/calendar-tasks-card/pull/7)). No
+  functional changes to the card itself.
+
+### Credits
+
+- French weather condition labels refined by
+  [@JourMic](https://github.com/JourMic) (PR #7). Merci !
+
+[1.8.1]: https://github.com/korova-sq/calendar-tasks-card/releases/tag/v1.8.1
+
 ## [1.8.0] - 2026-XX-XX
 
 ### Added
