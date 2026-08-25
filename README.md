@@ -9,7 +9,7 @@
 
 <br>
 
-![Calendar & Tasks Card](screenshots/banner.png)
+![Calendar & Tasks Card](https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/banner.png)
 
 <br>
 
@@ -54,24 +54,24 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 <table align="center">
 <tr>
-<td align="center" width="50%"><b>Main view with overdue and completed</b><br><img src="screenshots/01-overview.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>🎨 Color picker in the editor</b><br><img src="screenshots/02-editor-colors.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>Main view with overdue and completed</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/01-overview.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>🎨 Color picker in the editor</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/02-editor-colors.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>⚙️ Editor sections</b><br><img src="screenshots/03-editor-sections.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>📆 Week numbers</b><br><img src="screenshots/04-week-numbers.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>⚙️ Editor sections</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/03-editor-sections.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>📆 Week numbers</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/04-week-numbers.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>📋 Clean agenda view</b><br><img src="screenshots/05-agenda-view.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>☀️ Weather support</b><br><img src="screenshots/06-weather-support.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>📋 Clean agenda view</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/05-agenda-view.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>☀️ Weather support</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/06-weather-support.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>📅 Month view</b><br><img src="screenshots/06-month-view.jpeg" width="100%" /></td>
-<td align="center" width="50%"><b>📅 Month picker</b><br><img src="screenshots/07-month-picker.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>📅 Month view</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/06-month-view.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"><b>📅 Month picker</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/07-month-picker.jpeg" width="100%" /></td>
 </tr>
 <tr>
-<td align="center" width="50%"><b>📋 Day popup</b><br><img src="screenshots/08-day-popup.jpeg" width="100%" /></td>
-<td align="center" width="50%"></td>
+<td valign="top" align="center" width="50%"><b>📋 Day popup</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/08-day-popup.jpeg" width="100%" /></td>
+<td valign="top" align="center" width="50%"></td>
 </tr>
 </table>
 
