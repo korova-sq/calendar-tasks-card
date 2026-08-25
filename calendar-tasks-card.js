@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.9.0
+ * calendar-tasks-card v1.9.1
  */
 
-const CARD_VERSION = "1.9.0";
+const CARD_VERSION = "1.9.1";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -2453,6 +2453,15 @@ class CalendarTasksCard extends HTMLElement {
 
   async _fetchAll(force = false) {
     if (!this._hass) return;
+    // Prenota subito lo slot temporale PRIMA di qualsiasi await: `set hass()`
+    // scatta a ogni cambio di stato di qualsiasi entità e, con un fetch in volo
+    // (2-5 s su CalDAV), vedrebbe ancora il timestamp vecchio e lancerebbe altri
+    // _fetchAll() duplicati (6-10 richieste identiche per ciclo). Assegnando qui
+    // _lastFetch, i set hass() successivi durante il fetch trovano il timestamp
+    // aggiornato e non ripartono. Non usiamo `if (this._loading) return` perché,
+    // se _fetchAll lanciasse un'eccezione, _loading resterebbe true e la card non
+    // si aggiornerebbe mai più. (issue #12)
+    this._lastFetch = Date.now();
     this._loading = true;
     this._render();
 
@@ -2530,6 +2539,9 @@ class CalendarTasksCard extends HTMLElement {
     this._weatherForecast = weatherForecast;
     this._applyFilters();
     this._loading = false;
+    // Riallinea il timestamp alla fine del fetch completato: il primo assegnamento
+    // a inizio metodo blocca i duplicati durante il fetch, questo mantiene
+    // l'intervallo "dall'ultimo fetch riuscito". (issue #12)
     this._lastFetch = Date.now();
     this._render();
   }
