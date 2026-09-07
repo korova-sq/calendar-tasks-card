@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-09-01
+
+### Added
+- **Event progress bar** — new `event_progress` option (`off` / `line`). With `line`, an event that is currently in progress shows a thin bar under it, filled proportionally in the calendar's colour. For multi-day events the bar appears only on today's slice, filled to the real progress across the whole event, so you can tell at a glance how far along it is. The bar advances on its own via a lightweight timer (updates only the bars, no extra fetching) and stops cleanly when the card leaves the dashboard.
+- **Hour / minute countdown** — the relative time now drops to hours and minutes for events and tasks that are imminent and have a precise time: "In 3 hours" / "In 45 min" instead of a generic "Today". Items with only a date (no time) keep the day-based countdown.
+
+### Changed
+- **Native `ha-form` editor** — the entire visual editor has been rebuilt on Home Assistant's native `ha-form`. Entity and colour pickers, dropdowns, toggles and action selectors are now native HA controls, for a look and behaviour consistent with built-in cards.
+- **Native colour system** — per-entity colours now use HA's native `ui_color` picker (theme colours), and the automatic colour rotation for entities without a chosen colour draws from the native theme palette. The previous 12-colour custom palette has been removed.
+- **Section styling** — editor sections now use native `<details>` elements with a left-aligned arrow, matching the Sun Weather and World Clock cards for a consistent editor across the set.
+- Progress bar and relative-time countdown are now mutually exclusive on the same event: an in-progress event shows the bar, a future event shows the countdown — never both.
+
+### ⚠️ Upgrade note — re-pick your entity colours
+The colour system moved to HA's native palette. **Colours set in a previous version are not migrated** — after updating, open the card editor and re-pick the colour for each calendar/list you had customised. Entities without a chosen colour will use the new automatic rotation.
+
+### Fixed
+- Editor consistency and mobile layout refinements (entity and colour fields now stack vertically on narrow screens so the entity name stays fully visible).
+
+[1.10.0]: https://github.com/korova-sq/calendar-tasks-card/compare/v1.9.1...v1.10.0
+
+
 ## [1.9.1] - 2026-08-25
 
 ### Fixed

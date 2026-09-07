@@ -25,7 +25,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 📅 **Unified view**: events and tasks in one timeline, sorted by date
 - 🗓️ **Monthly grid view**: switch to a classic month calendar with event dots, tap-a-day popup, and month navigation
 - 🔀 **View switch button**: a header button to flip between agenda and month view without opening the editor (session-only, reverts to the default on reload)
-- 🎨 **Color picker**: 12-color palette per entity, auto-assigned when unset
+- 🎨 **Color picker**: native Home Assistant colour picker per entity (theme colours), auto-assigned from the theme palette when unset
 - ✅ **Task completion**: tick tasks directly from the card
 - 🚨 **Overdue section**: tasks past their deadline highlighted in red
 - 📋 **No Date section**: active tasks without a due date (can be hidden)
@@ -135,7 +135,9 @@ The card has a complete visual editor with six sections:
 - **Calendars**: any `calendar.*` entity from Home Assistant
 - **Todo lists**: any `todo.*` entity (Local To-do, Google Tasks, CalDAV, etc.)
 
-Each entity gets a colored circle where you can pick a color from the 12-color palette. The color applies to the vertical bar next to each event/task in the card.
+Each entity has a native Home Assistant colour picker where you can choose a theme colour. The colour applies to the vertical bar next to each event/task in the card. Leave it on **Default** to let the card assign a colour automatically from the theme palette (rotating through distinct colours for different entities).
+
+> **Upgrading from a version before 1.10.0?** The colour system moved to Home Assistant's native palette and colours set in older versions are not carried over — open the editor and re-pick the colour for each calendar/list you had customised.
 
 ### 🎛 General
 | Option | Default | Description |
@@ -160,7 +162,7 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 ### 🌐 Localization
 | Option | Default | Values |
 |---|---|---|
-| `language` | `auto` | `auto`, `en`, `it`, `de` |
+| `language` | `auto` | `auto`, `en`, `it`, `de`, `fr` |
 | `time_format` | `auto` | `auto`, `24h`, `12h` |
 | `first_day_of_week` | `auto` | `auto`, `monday`, `sunday`, `saturday` |
 
@@ -172,7 +174,8 @@ Each entity gets a colored circle where you can pick a color from the 12-color p
 | `show_end_time` | `false` | Show `HH:MM–HH:MM` for events |
 | `multi_day_events` | `true` | Show multi-day events on every day they span, with a `(2/6)` day counter |
 | `show_empty_days` | `false` | Show days with no events |
-| `show_relative_time` | `true` | "Tomorrow", "In 3 days" labels |
+| `show_relative_time` | `true` | Relative time labels: "Tomorrow", "In 3 days", and — for imminent items with a precise time — "In 3 hours" / "In 45 min" |
+| `event_progress` | `off` | Progress bar for an event currently in progress: `off` or `line` (a thin bar under the event, filled in the calendar's colour). Mutually exclusive with the relative-time label on the same event |
 | `show_source` | `false` | Show entity name as subtitle |
 | `show_description` | `true` | Show event/task description |
 | `show_location` | `false` | Show event location with map pin icon (calendar events only) |

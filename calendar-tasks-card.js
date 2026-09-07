@@ -1,27 +1,35 @@
 /**
- * calendar-tasks-card v1.9.1
+ * calendar-tasks-card v1.10.0
  */
 
-const CARD_VERSION = "1.9.1";
+const CARD_VERSION = "1.10.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
    Possono essere assegnati esplicitamente via entity_colors nella config,
    oppure vengono assegnati in rotazione automatica alle entità senza colore. */
-const COLOR_PALETTE = [
-  { name: "Blu",       value: "#4285f4" },
-  { name: "Verde",     value: "#34a853" },
-  { name: "Rosso",     value: "#d93025" },
-  { name: "Arancione", value: "#f9a825" },
-  { name: "Viola",     value: "#9c27b0" },
-  { name: "Rosa",      value: "#ec407a" },
-  { name: "Ciano",     value: "#00bcd4" },
-  { name: "Lime",      value: "#cddc39" },
-  { name: "Marrone",   value: "#795548" },
-  { name: "Grigio",    value: "#607d8b" },
-  { name: "Indaco",    value: "#3f51b5" },
-  { name: "Teal",      value: "#009688" },
+/* Colori nativi HA usati per la rotazione automatica quando un'entità non ha
+   un colore esplicito. Sono nomi di colore del tema HA (Material), gli stessi
+   che compaiono nel selettore nativo ui_color, così un colore "automatico"
+   combacia con quello scegliibile a mano. Scelti vivaci e distinguibili
+   (esclusi grigi/neutri). */
+const AUTO_COLORS = [
+  "blue", "red", "green", "orange", "purple", "teal",
+  "pink", "amber", "indigo", "cyan", "deep-orange", "light-green",
 ];
+
+/* Normalizza un valore colore in qualcosa di usabile in CSS:
+   - nome colore tema HA (es. "blue", "deep-orange") -> var(--blue-color)
+   - hex / rgb / hsl / var(...) gia' pronti -> usati cosi' come sono
+     (garantisce compatibilita' coi colori salvati dalla vecchia palette hex)
+   - vuoto/nullo -> null */
+function resolveColor(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (s.startsWith("#") || s.startsWith("rgb") || s.startsWith("hsl") || s.startsWith("var")) return s;
+  return `var(--${s}-color, ${s})`;
+}
 
 /* Default centralizzati. Usati sia dalla card (per applicare valori mancanti)
    sia dall'editor (per rimuovere dal YAML salvato i valori uguali al default).
@@ -48,6 +56,7 @@ const DEFAULT_CONFIG = {
   overdue_days: 0,
   allow_complete: false,
   show_relative_time: true,
+  event_progress: "off",    // "off" (nessuna barra), "line" (linea sottile di avanzamento)
   show_week_number: false,
   show_collapse_button: true,
   time_format: "auto",      // "auto" (segue locale), "12h", "24h"
@@ -352,6 +361,22 @@ const STYLES = `
   }
 
   .ctc-event-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+
+  /* Barra di avanzamento (event_progress: line) — linea sottile sotto l'evento
+     in corso, riempita in proporzione col colore del calendario/lista. */
+  .ctc-progress-line {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 5px;
+    background: rgba(136, 136, 136, 0.3);
+    background: color-mix(in srgb, var(--secondary-text-color, #888) 30%, transparent);
+    overflow: hidden;
+  }
+  .ctc-progress-line > .ctc-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s linear;
+  }
   .ctc-event-title {
     font-size: 14px;
     font-weight: 500;
@@ -987,56 +1012,9 @@ const EDITOR_STYLES = `
   .toggle-row:last-child { margin-bottom: 0; }
   .toggle-row label { font-size: 14px; color: var(--primary-text-color); }
   .entity-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  .entity-row { display: flex; align-items: center; gap: 8px; position: relative; }
+  .entity-row { display: flex; align-items: flex-start; gap: 8px; position: relative; }
 
-  /* Cerchietto colorato + palette per scegliere il colore di un'entità */
-  .color-wrap { position: relative; flex-shrink: 0; }
-  .color-swatch {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid var(--card-background-color, #fff);
-    box-shadow: 0 0 0 1px var(--divider-color, #ccc);
-    cursor: pointer;
-    padding: 0;
-    transition: transform 0.1s ease;
-  }
-  .color-swatch:hover { transform: scale(1.1); }
-  .color-palette {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    z-index: 99999;
-    background: var(--card-background-color, #fff);
-    border: 1px solid var(--divider-color, #ccc);
-    border-radius: 8px;
-    padding: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-  }
-  .color-palette-item, .color-palette-auto {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 1.5px solid var(--card-background-color, #fff);
-    box-shadow: 0 0 0 1px var(--divider-color, #ccc);
-    cursor: pointer;
-    padding: 0;
-    transition: transform 0.1s ease;
-  }
-  .color-palette-item:hover, .color-palette-auto:hover { transform: scale(1.15); }
-  .color-palette-auto {
-    background: transparent;
-    color: var(--primary-text-color, #212121);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .color-palette-auto ha-icon { --mdc-icon-size: 14px; }
-  .entity-wrap { flex: 1; position: relative; }
-  .entity-wrap .ctc-native-input { width: 100%; }
+
   .autocomplete { position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: var(--card-background-color, #fff); border: 1px solid var(--divider-color, #ccc); border-top: none; border-radius: 0 0 4px 4px; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
   .ac-item { padding: 8px 12px; font-size: 13px; cursor: pointer; color: var(--primary-text-color); border-bottom: 1px solid var(--divider-color, #eee); }
   .ac-item:last-child { border-bottom: none; }
@@ -1059,36 +1037,36 @@ const EDITOR_STYLES = `
   select.ctc-native-input { -webkit-appearance: none; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--secondary-text-color) 50%), linear-gradient(135deg, var(--secondary-text-color) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 24px; }
 
   /* Sezioni collassabili */
-  .collapsible { border: 1px solid var(--divider-color); border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
-  .collapsible.open { overflow: visible; }
+  /* Sezioni <details>/<summary> native — stile allineato a sun-weather /
+     world-clock card per coerenza tra le card. Freccina ▸ a sinistra che
+     ruota di 90° all'apertura. */
+  .collapsible {
+    border: 1px solid var(--divider-color, #e0e0e0);
+    border-radius: 8px; padding: 0 10px; margin-bottom: 6px;
+  }
+  .collapsible[open] { padding-bottom: 10px; }
   .collapsible:last-child { margin-bottom: 0; }
   .collapsible-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; cursor: pointer; user-select: none;
-    background: var(--card-background-color);
-    transition: background 0.15s;
+    cursor: pointer; padding: 10px 4px; font-weight: 600;
+    color: var(--primary-text-color); list-style: none;
+    display: flex; align-items: center; gap: 8px;
   }
-  .collapsible-header:hover { background: var(--secondary-background-color); }
-  .collapsible-title-wrap { display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .collapsible-header::-webkit-details-marker { display: none; }
+  .collapsible-header::before {
+    content: '\u25B8'; display: inline-block; margin-right: 4px;
+    transition: transform 0.15s; color: var(--secondary-text-color);
+    flex-shrink: 0;
+  }
+  .collapsible[open] > .collapsible-header::before { transform: rotate(90deg); }
   .collapsible-icon { --mdc-icon-size: 18px; color: var(--secondary-text-color, #888); flex-shrink: 0; }
-  .collapsible-title { font-size: 14px; font-weight: 500; color: var(--primary-text-color); letter-spacing: 0.02em; }
-  .collapsible-chevron {
-    --mdc-icon-size: 20px;
-    color: var(--secondary-text-color);
-    transition: transform 0.2s ease;
-  }
-  .collapsible.open > .collapsible-header > .collapsible-chevron { transform: rotate(180deg); }
-  .collapsible > .collapsible-body { padding: 10px 14px; border-top: 1px solid var(--divider-color); display: none; }
-  .collapsible.open > .collapsible-body { display: block; }
+  .collapsible-title { font-size: 14px; font-weight: 600; color: var(--primary-text-color); letter-spacing: 0.02em; }
+  .collapsible-body { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 2px; }
 
-  /* Tendine annidate (dentro Interazioni) */
-  .collapsible.nested { margin-bottom: 6px; background: var(--secondary-background-color); }
+  /* Sezioni annidate (Calendari/Liste dentro Entità): leggermente più compatte */
+  .collapsible.nested { margin-bottom: 6px; }
   .collapsible.nested:last-child { margin-bottom: 0; }
-  .collapsible.nested > .collapsible-header { padding: 8px 12px; background: transparent; }
-  .collapsible.nested > .collapsible-header:hover { background: var(--card-background-color); }
-  .collapsible.nested > .collapsible-header > .collapsible-title-wrap > .collapsible-title { font-size: 13px; }
-  .collapsible.nested > .collapsible-header > .collapsible-chevron { --mdc-icon-size: 18px; }
-  .collapsible.nested > .collapsible-body { padding: 8px 12px; }
+  .collapsible.nested > .collapsible-header { padding: 8px 4px; }
+  .collapsible.nested > .collapsible-header > .collapsible-title { font-size: 13px; }
 
   .sub-title {
     font-size: 11px;
@@ -1489,6 +1467,9 @@ const I18N = {
     ed_compact_mode: "Modalità compatta (spazi ridotti)",
     ed_show_week_number: "Mostra numero settimana",
     ed_show_end_time: "Mostra orario di fine",
+    ed_event_progress: "Barra di avanzamento",
+    ed_progress_off: "Nessuna",
+    ed_progress_line: "Linea",
     ed_multi_day_events: "Mostra eventi multi-giorno in tutti i giorni",
     ed_month_view: "Vista calendario mensile (griglia)",
     day_no_events: "Nessun evento o task",
@@ -1533,8 +1514,7 @@ const I18N = {
     ed_param_service: "Servizio",
     ed_param_entity: "Entità (opzionale)",
     ed_data_json: "Dati (JSON)",
-    ed_choose_color: "Scegli colore",
-    ed_automatic: "Automatico",
+    ed_select_color: "Seleziona un colore",
     ed_tap: "Tap",
     ed_hold: "Pressione lunga",
     ed_double_tap: "Doppio tap",
@@ -1546,6 +1526,8 @@ const I18N = {
     switch_to_agenda: "Vista agenda",
     days_missing_one: "Manca un giorno",
     days_missing_n: (n) => `Mancano ${n} giorni`,
+    in_hours_n: (n) => n === 1 ? "Tra 1 ora" : `Tra ${n} ore`,
+    in_minutes_n: (n) => n <= 1 ? "Tra 1 min" : `Tra ${n} min`,
     week_missing_one: "Manca una settimana",
     weeks_missing_two: "Mancano due settimane",
     month_missing_one: "Manca circa un mese",
@@ -1637,6 +1619,9 @@ const I18N = {
     ed_compact_mode: "Compact mode (reduced spacing)",
     ed_show_week_number: "Show week number",
     ed_show_end_time: "Show end time",
+    ed_event_progress: "Progress bar",
+    ed_progress_off: "None",
+    ed_progress_line: "Line",
     ed_multi_day_events: "Show multi-day events on every day",
     ed_month_view: "Monthly calendar view (grid)",
     day_no_events: "No events or tasks",
@@ -1681,8 +1666,7 @@ const I18N = {
     ed_param_service: "Service",
     ed_param_entity: "Entity (optional)",
     ed_data_json: "Data (JSON)",
-    ed_choose_color: "Choose color",
-    ed_automatic: "Automatic",
+    ed_select_color: "Select a color",
     ed_tap: "Tap",
     ed_hold: "Hold",
     ed_double_tap: "Double tap",
@@ -1694,6 +1678,8 @@ const I18N = {
     switch_to_agenda: "Agenda view",
     days_missing_one: "In 1 day",
     days_missing_n: (n) => `In ${n} days`,
+    in_hours_n: (n) => n === 1 ? "In 1 hour" : `In ${n} hours`,
+    in_minutes_n: (n) => n <= 1 ? "In 1 min" : `In ${n} min`,
     week_missing_one: "In 1 week",
     weeks_missing_two: "In 2 weeks",
     month_missing_one: "In about 1 month",
@@ -1786,6 +1772,9 @@ const I18N = {
     ed_compact_mode: "Kompaktmodus (kleinere Abstände)",
     ed_show_week_number: "Zeige Kalenderwoche",
     ed_show_end_time: "Zeige Endzeit",
+    ed_event_progress: "Fortschrittsbalken",
+    ed_progress_off: "Keine",
+    ed_progress_line: "Linie",
     ed_multi_day_events: "Mehrtägige Ereignisse an allen Tagen zeigen",
     ed_month_view: "Monatskalender-Ansicht (Raster)",
     day_no_events: "Keine Ereignisse oder Aufgaben",
@@ -1830,8 +1819,7 @@ const I18N = {
     ed_param_service: "Dienst",
     ed_param_entity: "Entität (optional)",
     ed_data_json: "Daten (JSON)",
-    ed_choose_color: "Farbe wählen",
-    ed_automatic: "Automatisch",
+    ed_select_color: "Farbe auswählen",
     ed_tap: "Klick",
     ed_hold: "Halten",
     ed_double_tap: "Doppelklick",
@@ -1843,6 +1831,8 @@ const I18N = {
     switch_to_agenda: "Agenda-Ansicht",
     days_missing_one: "In 1 Tag",
     days_missing_n: (n) => `In ${n} Tagen`,
+    in_hours_n: (n) => n === 1 ? "In 1 Stunde" : `In ${n} Stunden`,
+    in_minutes_n: (n) => n <= 1 ? "In 1 Min" : `In ${n} Min`,
     week_missing_one: "In 1 Woche",
     weeks_missing_two: "In 2 Wochen",
     month_missing_one: "In etwa 1 Monat",
@@ -1935,6 +1925,9 @@ const I18N = {
     ed_compact_mode: "Mode compact (espacement réduit)",
     ed_show_week_number: "Afficher le numéro de semaine",
     ed_show_end_time: "Afficher l'heure de fin",
+    ed_event_progress: "Barre de progression",
+    ed_progress_off: "Aucune",
+    ed_progress_line: "Ligne",
     ed_multi_day_events: "Afficher les événements multi-jours chaque jour",
     ed_month_view: "Vue calendrier mensuel (grille)",
     day_no_events: "Aucun événement ou tâche",
@@ -1979,8 +1972,7 @@ const I18N = {
     ed_param_service: "Service",
     ed_param_entity: "Entité (facultatif)",
     ed_data_json: "Données (JSON)",
-    ed_choose_color: "Choisir la couleur",
-    ed_automatic: "Automatique",
+    ed_select_color: "Sélectionner une couleur",
     ed_tap: "Appui",
     ed_hold: "Appui long",
     ed_double_tap: "Double appui",
@@ -1992,6 +1984,8 @@ const I18N = {
     switch_to_agenda: "Vue agenda",
     days_missing_one: "Dans 1 jour",
     days_missing_n: (n) => `Dans ${n} jours`,
+    in_hours_n: (n) => n === 1 ? "Dans 1 heure" : `Dans ${n} heures`,
+    in_minutes_n: (n) => n <= 1 ? "Dans 1 min" : `Dans ${n} min`,
     week_missing_one: "Dans 1 semaine",
     weeks_missing_two: "Dans 2 semaines",
     month_missing_one: "Dans environ 1 mois",
@@ -2046,12 +2040,12 @@ function t(key, lang) {
    sempre lo stesso colore. */
 function getEntityColor(entityId, config) {
   const explicit = config.entity_colors && config.entity_colors[entityId];
-  if (explicit) return explicit;
+  if (explicit) return resolveColor(explicit);
   // Rotazione: posizione dell'entità nella lista combinata
   const allEntities = [...(config.calendars || []), ...(config.todos || [])];
   const idx = allEntities.indexOf(entityId);
-  if (idx < 0) return COLOR_PALETTE[0].value;
-  return COLOR_PALETTE[idx % COLOR_PALETTE.length].value;
+  const name = idx < 0 ? AUTO_COLORS[0] : AUTO_COLORS[idx % AUTO_COLORS.length];
+  return resolveColor(name);
 }
 
 /* Valida un entity_id Home Assistant: formato "dominio.nome", caratteri minuscoli,
@@ -2065,6 +2059,26 @@ function isValidEntityId(id) {
 function formatRelativeTime(taskDate, referenceDate, lang) {
   if (!taskDate) return null;
   const ref = referenceDate || new Date();
+
+  // Ramo "ore/minuti": se il target ha un ORARIO preciso (non mezzanotte, che
+  // è la data fittizia dei task/eventi solo-data) ed è nel FUTURO a meno di
+  // 24 ore, mostra "Tra X ore" / "Tra X min" invece del generico "Oggi".
+  // Sotto l'ora → minuti; da 1 ora in su → ore. Sopra le 24 ore o senza orario
+  // preciso si prosegue con la logica a giorni esistente.
+  const hasTime = !(taskDate.getHours() === 0 && taskDate.getMinutes() === 0 && taskDate.getSeconds() === 0);
+  if (hasTime) {
+    const diffMinTotal = Math.floor((taskDate.getTime() - ref.getTime()) / 60000);
+    if (diffMinTotal >= 0 && diffMinTotal < 1440) { // entro 24 ore, non passato
+      if (diffMinTotal < 60) {
+        const fn = t("in_minutes_n", lang);
+        return typeof fn === "function" ? fn(diffMinTotal) : `${diffMinTotal}`;
+      }
+      const hours = Math.floor(diffMinTotal / 60);
+      const fn = t("in_hours_n", lang);
+      return typeof fn === "function" ? fn(hours) : `${hours}`;
+    }
+  }
+
   const refMidnight = new Date(ref);
   refMidnight.setHours(0, 0, 0, 0);
   const taskMidnight = new Date(taskDate);
@@ -2110,6 +2124,19 @@ function formatRelativeTime(taskDate, referenceDate, lang) {
     const fn = t("overdue_n", lang);
     return typeof fn === "function" ? fn(past) : `${past}`;
   }
+}
+
+/* Calcola l'avanzamento (0..1) di un evento/task IN CORSO adesso.
+   Ritorna null se: manca start o end, l'evento non è ancora iniziato, è già
+   finito, oppure la durata è nulla/negativa. Usato per la barra di
+   avanzamento (event_progress). `now` iniettabile per i test/timer. */
+function getEventProgress(startMs, endMs, now) {
+  if (startMs == null || endMs == null) return null;
+  const t = (now != null ? now : Date.now());
+  if (endMs <= startMs) return null;      // durata non valida
+  if (t <= startMs) return null;          // non ancora iniziato
+  if (t >= endMs) return null;            // già finito
+  return (t - startMs) / (endMs - startMs);
 }
 
 /* Prepara la descrizione per il render:
@@ -2380,6 +2407,57 @@ class CalendarTasksCard extends HTMLElement {
     this._weatherForecast = [];  // array di previsioni meteo (recuperato via weather.get_forecasts)
     this._loading = false;
     this._lastFetch = null;
+    this._progressTimer = null;
+  }
+
+  connectedCallback() {
+    // Avvia il timer che fa avanzare le barre di progresso, se attive.
+    this._startProgressTimer();
+  }
+
+  disconnectedCallback() {
+    // Ferma il timer quando la card esce dal DOM: evita timer orfani che
+    // continuerebbero a girare a vuoto (lezione issue #12 sul ciclo di vita).
+    this._stopProgressTimer();
+  }
+
+  _startProgressTimer() {
+    if (this._progressTimer) return;                 // già avviato
+    if (this._config?.event_progress !== "line") return; // niente barre → niente timer
+    this._progressTimer = setInterval(() => this._updateProgressBars(), 60000);
+  }
+
+  _stopProgressTimer() {
+    if (this._progressTimer) {
+      clearInterval(this._progressTimer);
+      this._progressTimer = null;
+    }
+  }
+
+  /* Aggiorna SOLO la larghezza delle barre di progresso già nel DOM, senza
+     rifare fetch né ridisegnare la card. Se un evento è finito, la barra
+     resta all'ultimo valore fino al prossimo refresh completo (che la
+     rimuoverà). Leggero: tocca solo gli elementi .ctc-progress esistenti. */
+  _updateProgressBars() {
+    const root = this.shadowRoot;
+    if (!root) return;
+    const bars = root.querySelectorAll(".ctc-progress");
+    if (!bars.length) return;
+    const now = Date.now();
+    bars.forEach((bar) => {
+      const startMs = Number(bar.dataset.start);
+      const endMs = Number(bar.dataset.end);
+      const fill = bar.querySelector(".ctc-progress-fill");
+      if (!fill) return;
+      const p = getEventProgress(startMs, endMs, now);
+      if (p != null) {
+        fill.style.width = Math.round(p * 100) + "%";
+      } else if (now >= endMs) {
+        // Evento finito tra un refresh e l'altro: completa la barra al 100%
+        // (verrà rimossa del tutto al prossimo refresh della card).
+        fill.style.width = "100%";
+      }
+    });
   }
 
   setConfig(config) {
@@ -3938,16 +4016,42 @@ class CalendarTasksCard extends HTMLElement {
               }
             }
           }
-          // Tempo relativo "Manca X giorni" (per eventi è solo nel futuro, niente "scaduto").
-          // Nei giorni di prosecuzione lo nascondiamo: "mancano 2 giorni" su un evento
-          // già iniziato sarebbe fuorviante.
+          // Barra di avanzamento (event_progress: line) per eventi con orario
+          // in corso adesso. data-start/data-end permettono al timer di
+          // aggiornare la larghezza senza ridisegnare la card.
+          let progress = "";
+          if (this._config.event_progress === "line" && !allDay && ev.start.dateTime && ev.end?.dateTime) {
+            const startDate = new Date(ev.start.dateTime);
+            const endDate = new Date(ev.end.dateTime);
+            const isMultiDay = (ev._ctcTotalDays || 1) > 1;
+            // La barra appare per:
+            //  - eventi in giornata singola in corso;
+            //  - eventi multi-giorno: SOLO sul pezzo del giorno corrente (oggi),
+            //    con percentuale calcolata sull'INTERO evento (start/end reali),
+            //    così al giorno 3 di 5 la barra è ~50% e capisci a vista quanto
+            //    manca. I giorni successivi mostrano invece il countdown testuale.
+            const showBar = !isMultiDay || isToday;
+            if (showBar) {
+              const startMs = startDate.getTime();
+              const endMs = endDate.getTime();
+              const p = getEventProgress(startMs, endMs);
+              if (p != null) {
+                const pct = Math.round(p * 100);
+                progress = `<div class="ctc-progress-line ctc-progress" data-start="${startMs}" data-end="${endMs}"><div class="ctc-progress-fill" style="width:${pct}%;background:${groupColor}"></div></div>`;
+              }
+            }
+          }
+          // Countdown testuale ("Oggi", "Mancano X giorni") — SOLO se non c'è la
+          // barra. Barra e countdown sono mutuamente esclusivi (come
+          // calendar-card-pro): l'evento in corso mostra la barra, quello
+          // futuro il countdown, mai entrambi sullo stesso evento.
           let rel = "";
-          if (this._config.show_relative_time && !isContinuation) {
+          if (!progress && this._config.show_relative_time && !isContinuation) {
             const evDate = parseEventDate(ev.start.dateTime || ev.start.date);
             const relText = formatRelativeTime(evDate, undefined, lang);
             if (relText) rel = `<div class="ctc-event-relative">${relText}</div>`;
           }
-          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}${dayCounter}</div>${desc}${loc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
+          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}${dayCounter}</div>${desc}${loc}${rel}${sub}${progress}</div><div class="ctc-event-time">${timeStr}</div></div>`;
         }).join("");
         return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
@@ -4249,6 +4353,14 @@ class CalendarTasksCard extends HTMLElement {
       });
       this._cleanupActions.push(cleanup);
     }
+
+    // (Ri)gestisci il timer delle barre di progresso in base alla config e alla
+    // presenza di barre nel DOM: se non servono, viene fermato; se servono ed è
+    // spento, viene avviato.
+    this._stopProgressTimer();
+    if (this._config.event_progress === "line" && this.shadowRoot.querySelector(".ctc-progress")) {
+      this._startProgressTimer();
+    }
   }
 
   static getConfigElement() { return document.createElement("calendar-tasks-card-editor"); }
@@ -4400,14 +4512,6 @@ class CalendarTasksCardEditor extends HTMLElement {
     if (daysInp && daysInp !== document.activeElement) daysInp.value = this._config.days || 7;
   }
 
-  _getEntities(domain) {
-    if (!this._hass) return [];
-    return Object.keys(this._hass.states)
-      .filter(id => id.startsWith(domain + "."))
-      .map(id => ({ id, name: this._hass.states[id]?.attributes?.friendly_name || id }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }
-
   _makeInput(id, type, value, extraClass, onChange) {
     const inp = document.createElement("input");
     inp.id = id;
@@ -4456,52 +4560,50 @@ class CalendarTasksCardEditor extends HTMLElement {
     return row;
   }
 
-  /* Crea una sezione collassabile con titolo + chevron animato.
-     Restituisce { wrapper, body } — il body è dove l'editor aggiunge i campi.
-     Lo stato aperto/chiuso è ricordato in _openSections per non ricreare la
-     stessa sezione chiusa quando l'editor viene re-renderizzato. */
+  /* Crea una sezione collassabile nativa (<details>/<summary>).
+     Restituisce { wrapper, body } — il body è dove l'editor aggiunge i campi. */
   _makeCollapsible(id, title, defaultOpen = false, icon = null) {
+    // Struttura nativa <details>/<summary> (stessa della sun-weather e
+    // world-clock card) per un look coerente tra le card. L'apri/chiudi è
+    // gestito dal browser; la freccina ▸ arriva dal CSS (summary::before),
+    // a sinistra del titolo. Firma di ritorno invariata { wrapper, body }.
+    // Lo stato aperto/chiuso è ricordato in _openSections così un re-render
+    // dell'editor (es. quando si aggiunge/rimuove un calendario) non richiude
+    // le sezioni che l'utente aveva aperto.
     if (!this._openSections) this._openSections = {};
     if (!(id in this._openSections)) this._openSections[id] = defaultOpen;
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "collapsible" + (this._openSections[id] ? " open" : "");
+    const wrapper = document.createElement("details");
+    wrapper.className = "collapsible";
+    wrapper.open = this._openSections[id];
     wrapper.dataset.sectionId = id;
 
-    const header = document.createElement("div");
-    header.className = "collapsible-header";
-
-    // Container per icona + titolo a sinistra
-    const titleWrap = document.createElement("span");
-    titleWrap.className = "collapsible-title-wrap";
+    const summary = document.createElement("summary");
+    summary.className = "collapsible-header";
+    // Salvo lo stato solo sull'interazione reale dell'utente (click sul
+    // summary), non sull'evento `toggle` che può scattare in modo spurio
+    // mentre l'editor si ri-renderizza. Al click, <details> sta per invertire
+    // il suo stato, quindi memorizzo l'opposto di quello corrente.
+    summary.addEventListener("click", () => {
+      this._openSections[id] = !wrapper.open;
+    });
 
     if (icon) {
       const iconEl = document.createElement("ha-icon");
       iconEl.setAttribute("icon", icon);
       iconEl.className = "collapsible-icon";
-      titleWrap.appendChild(iconEl);
+      summary.appendChild(iconEl);
     }
 
     const titleEl = document.createElement("span");
     titleEl.className = "collapsible-title";
     titleEl.textContent = title;
-    titleWrap.appendChild(titleEl);
-
-    const chevron = document.createElement("ha-icon");
-    chevron.setAttribute("icon", "mdi:chevron-down");
-    chevron.className = "collapsible-chevron";
-
-    header.append(titleWrap, chevron);
+    summary.appendChild(titleEl);
 
     const body = document.createElement("div");
     body.className = "collapsible-body";
 
-    header.addEventListener("click", () => {
-      const isOpen = wrapper.classList.toggle("open");
-      this._openSections[id] = isOpen;
-    });
-
-    wrapper.append(header, body);
+    wrapper.append(summary, body);
     return { wrapper, body };
   }
 
@@ -4614,68 +4716,69 @@ class CalendarTasksCardEditor extends HTMLElement {
   _makeEntityRow(type, entityId, index) {
     const domain = type === "calendar" ? "calendar" : "todo";
     const key = type === "calendar" ? "calendars" : "todos";
+    const lang = this._lang();
 
     const row = document.createElement("div");
     row.className = "entity-row";
 
-    const wrap = document.createElement("div");
-    wrap.className = "entity-wrap";
-
-    const inp = document.createElement("input");
-    inp.type = "text";
-    inp.className = "ctc-native-input";
-    inp.style.width = "100%";
-    inp.value = entityId;
-    inp.placeholder = `${domain}.name`;
-
-    // Blocca shortcut HA
-    blockHAShortcuts(inp);
-
-    const dropdown = document.createElement("div");
-    dropdown.className = "autocomplete";
-    dropdown.style.display = "none";
-
-    const renderDropdown = (filter) => {
-      const entities = this._getEntities(domain);
-      const filtered = entities.filter(e =>
-        e.id.includes(filter.toLowerCase()) || e.name.toLowerCase().includes(filter.toLowerCase())
-      ).slice(0, 8);
-
-      if (!filtered.length) { dropdown.style.display = "none"; return; }
-
-      dropdown.innerHTML = "";
-      filtered.forEach(({ id, name }) => {
-        const item = document.createElement("div");
-        item.className = "ac-item";
-        item.innerHTML = `<div class="ac-name">${name}</div><div class="ac-id">${id}</div>`;
-        item.addEventListener("mousedown", e => {
-          e.preventDefault();
-          inp.value = id;
-          dropdown.style.display = "none";
-          const list = [...(this._config[key] || [])];
-          list[index] = id;
-          this._config[key] = list;
-          this._fire();
-        });
-        dropdown.appendChild(item);
-      });
-      dropdown.style.display = "block";
-    };
-
-    inp.addEventListener("focus", () => renderDropdown(inp.value));
-    inp.addEventListener("input", () => renderDropdown(inp.value));
-    inp.addEventListener("blur", () => {
-      setTimeout(() => { dropdown.style.display = "none"; }, 200);
+    // ── Selettore ENTITÀ nativo (ha-form) ──
+    const entForm = document.createElement("ha-form");
+    entForm.hass = this._hass;
+    entForm.style.cssText = "width: 100%;";
+    entForm.data = { entity: entityId || "" };
+    entForm.schema = [{ name: "entity", selector: { entity: { domain } } }];
+    entForm.computeLabel = () => "";
+    entForm.addEventListener("value-changed", (e) => {
+      const newId = (e.detail.value || {}).entity || "";
       const list = [...(this._config[key] || [])];
-      list[index] = inp.value;
+      list[index] = newId;
       this._config[key] = list;
       this._fire();
+      setTimeout(syncColorForm, 50);
     });
 
-    wrap.append(inp, dropdown);
+    // ── Selettore COLORE nativo (ui_color) ──
+    // "Default"/vuoto = nessun override → la card usa la rotazione automatica.
+    // Un colore scelto viene salvato in entity_colors[id] come nome tema HA.
+    const colForm = document.createElement("ha-form");
+    colForm.hass = this._hass;
+    colForm.style.cssText = "width: 100%;";
+    const currentColor = () => {
+      const id = this._config[key][index];
+      return (id && this._config.entity_colors && this._config.entity_colors[id]) || undefined;
+    };
+    const syncColorForm = () => {
+      colForm.data = { color: currentColor() };
+    };
+    syncColorForm();
+    colForm.schema = [{ name: "color", selector: { ui_color: {} } }];
+    // Label "Seleziona un colore" solo quando non c'è un colore scelto (campo
+    // altrimenti muto); quando un colore è scelto, il riquadro lo mostra già
+    // (pallino + nome) e la label non serve.
+    colForm.computeLabel = () => currentColor() ? "" : t("ed_select_color", lang);
+    colForm.addEventListener("value-changed", (e) => {
+      const id = this._config[key][index];
+      if (!isValidEntityId(id)) return; // niente colori orfani su entità non scelta
+      const chosen = (e.detail.value || {}).color;
+      const newColors = { ...(this._config.entity_colors || {}) };
+      if (chosen) {
+        newColors[id] = chosen;
+      } else {
+        delete newColors[id]; // "Default" → torna alla rotazione automatica
+      }
+      this._config.entity_colors = newColors;
+      this._fire();
+      // Aggiorna il form: ri-sincronizza il valore e forza il ricalcolo della
+      // label (che deve sparire quando un colore è scelto e ricomparire se
+      // torni a "default").
+      syncColorForm();
+      colForm.schema = [{ name: "color", selector: { ui_color: {} } }];
+    });
 
+    // ── Pulsante rimuovi ──
     const removeBtn = document.createElement("button");
     removeBtn.className = "remove-btn";
+    removeBtn.type = "button";
     removeBtn.innerHTML = `<ha-icon icon="mdi:close"></ha-icon>`;
     removeBtn.addEventListener("click", () => {
       const list = [...(this._config[key] || [])];
@@ -4687,102 +4790,13 @@ class CalendarTasksCardEditor extends HTMLElement {
       this._rendered = true;
     });
 
-    row.append(wrap, removeBtn);
-
-    // ── Cerchietto colorato per scegliere il colore dell'entità ──
-    // Creato SEMPRE, anche con entità vuota (apparirà comunque per evitare layout shift).
-    // Il colore mostrato viene calcolato dinamicamente: quando entityId è vuoto, mostriamo
-    // un colore "ghost" (grigio chiaro) che diventa attivo non appena l'entità viene scelta.
-    const colorBtn = document.createElement("button");
-    colorBtn.className = "color-swatch";
-    colorBtn.title = t("ed_choose_color", this._lang());
-    colorBtn.type = "button";
-
-    const palette = document.createElement("div");
-    palette.className = "color-palette";
-    palette.style.display = "none";
-
-    // Funzione per ricalcolare il colore corrente in base allo stato attuale del config.
-    // Chiamata sia al setup iniziale, sia quando l'entità cambia (focus/blur/select).
-    const refreshSwatchColor = () => {
-      const currentId = this._config[key][index];
-      if (!isValidEntityId(currentId)) {
-        // Entità non ancora scelta: cerchietto "ghost" semitrasparente
-        colorBtn.style.background = "var(--divider-color, #ccc)";
-        colorBtn.style.opacity = "0.5";
-      } else {
-        colorBtn.style.background = getEntityColor(currentId, this._config);
-        colorBtn.style.opacity = "1";
-      }
-    };
-    refreshSwatchColor();
-
-    // Aggancia listener sull'input per aggiornare il cerchietto quando l'entità cambia
-    inp.addEventListener("blur", () => setTimeout(refreshSwatchColor, 250));
-
-    // Pulsante "Auto" — rimuove l'override esplicito, torna alla rotazione automatica
-    const autoBtn = document.createElement("button");
-    autoBtn.className = "color-palette-auto";
-    autoBtn.type = "button";
-    autoBtn.title = t("ed_automatic", this._lang());
-    autoBtn.innerHTML = `<ha-icon icon="mdi:autorenew"></ha-icon>`;
-    autoBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const currentId = this._config[key][index];
-      if (currentId && this._config.entity_colors && this._config.entity_colors[currentId]) {
-        const newColors = { ...this._config.entity_colors };
-        delete newColors[currentId];
-        this._config.entity_colors = newColors;
-        this._fire();
-        refreshSwatchColor();
-      }
-      palette.style.display = "none";
-    });
-    palette.appendChild(autoBtn);
-
-    COLOR_PALETTE.forEach(({ name, value }) => {
-      const swatch = document.createElement("button");
-      swatch.className = "color-palette-item";
-      swatch.style.background = value;
-      swatch.title = name;
-      swatch.type = "button";
-      swatch.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const currentId = this._config[key][index];
-        // Se l'entità non è ancora stata scelta, non salviamo nulla (sarebbe orfano)
-        if (!isValidEntityId(currentId)) {
-          palette.style.display = "none";
-          return;
-        }
-        const newColors = { ...(this._config.entity_colors || {}) };
-        newColors[currentId] = value;
-        this._config.entity_colors = newColors;
-        this._fire();
-        refreshSwatchColor();
-        palette.style.display = "none";
-      });
-      palette.appendChild(swatch);
-    });
-
-    colorBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      // Se l'entità non è valida, mostriamo comunque la palette ma il click su un colore
-      // non farà nulla (vedi check sopra). Inserisco un piccolo tooltip visivo:
-      palette.style.display = palette.style.display === "none" ? "grid" : "none";
-    });
-
-    // Chiudi la palette quando clicchi fuori
-    const closeOnOutside = (e) => {
-      if (!row.contains(e.target)) palette.style.display = "none";
-    };
-    document.addEventListener("click", closeOnOutside);
-    row._cleanup = () => document.removeEventListener("click", closeOnOutside);
-
-    const colorWrap = document.createElement("div");
-    colorWrap.className = "color-wrap";
-    colorWrap.append(colorBtn, palette);
-    row.insertBefore(colorWrap, wrap);
-
+    // Impila entità (sopra) e colore (sotto) in una colonna a larghezza piena,
+    // così su mobile il selettore entità ha spazio per mostrare il nome.
+    // Il pulsante rimuovi resta a lato, allineato in alto.
+    const stack = document.createElement("div");
+    stack.style.cssText = "display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0;";
+    stack.append(entForm, colForm);
+    row.append(stack, removeBtn);
     return row;
   }
 
@@ -4860,29 +4874,52 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("header", t("ed_header", lang), false, "mdi:page-layout-header");
 
-      body.appendChild(this._makeToggle(t("ed_show_title", lang), this._config.show_title !== false,
-        v => { this._config.show_title = v; this._fire(); }));
-
-      const rowTitle = document.createElement("div");
-      rowTitle.className = "field-row";
-      const lblTitle = document.createElement("label");
-      lblTitle.textContent = t("ed_title", lang);
-      const inpTitle = this._makeInput("inp-title", "text", this._config.title || "Agenda", "wide",
-        v => { this._config.title = v; this._fire(); });
-      rowTitle.append(lblTitle, inpTitle);
-      body.appendChild(rowTitle);
-
-      body.appendChild(this._makeToggle(t("ed_show_current_date", lang), this._config.show_current_date === true,
-        v => { this._config.show_current_date = v; this._fire(); }));
-
-      body.appendChild(this._makeToggle(t("ed_show_refresh", lang), this._config.show_refresh !== false,
-        v => { this._config.show_refresh = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_add_event", lang), this._config.show_add_event === true,
-        v => { this._config.show_add_event = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_collapse", lang), this._config.show_collapse_button !== false,
-        v => { this._config.show_collapse_button = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_view_switch", lang), this._config.show_view_switch === true,
-        v => { this._config.show_view_switch = v; this._fire(); }));
+      // ha-form nativo (convertito dalla v1.8.0-haform, integrato con i campi
+      // 1.9.x): show_current_date (dopo il titolo) e show_view_switch (in fondo),
+      // che nel ramo ha-form originale non esistevano. Ordine identico al custom.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
+      const c = this._config;
+      form.data = {
+        show_title: c.show_title !== false,
+        title: c.title != null ? c.title : "Agenda",
+        show_current_date: c.show_current_date === true,
+        show_refresh: c.show_refresh !== false,
+        show_add_event: c.show_add_event === true,
+        show_collapse_button: c.show_collapse_button !== false,
+        show_view_switch: c.show_view_switch === true,
+      };
+      form.schema = [
+        { name: "show_title", selector: { boolean: {} } },
+        { name: "title", selector: { text: {} } },
+        { name: "show_current_date", selector: { boolean: {} } },
+        { name: "show_refresh", selector: { boolean: {} } },
+        { name: "show_add_event", selector: { boolean: {} } },
+        { name: "show_collapse_button", selector: { boolean: {} } },
+        { name: "show_view_switch", selector: { boolean: {} } },
+      ];
+      const hLabels = {
+        show_title: t("ed_show_title", lang),
+        title: t("ed_title", lang),
+        show_current_date: t("ed_show_current_date", lang),
+        show_refresh: t("ed_show_refresh", lang),
+        show_add_event: t("ed_show_add_event", lang),
+        show_collapse_button: t("ed_show_collapse", lang),
+        show_view_switch: t("ed_show_view_switch", lang),
+      };
+      form.computeLabel = (s) => hLabels[s.name] || s.name;
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        this._config.show_title = v.show_title;
+        this._config.title = v.title;
+        this._config.show_current_date = v.show_current_date;
+        this._config.show_refresh = v.show_refresh;
+        this._config.show_add_event = v.show_add_event;
+        this._config.show_collapse_button = v.show_collapse_button;
+        this._config.show_view_switch = v.show_view_switch;
+        this._fire();
+      });
+      body.appendChild(form);
 
       root.appendChild(wrapper);
     }
@@ -4891,54 +4928,72 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("layout", t("ed_layout", lang), false, "mdi:view-dashboard-outline");
 
-      // Vista griglia mensile (default della card; il bottone nell'header, se
-      // attivo, può cambiarla temporaneamente per la sessione).
-      body.appendChild(this._makeToggle(t("ed_month_view", lang), this._config.month_view === true,
-        v => { this._config.month_view = v; this._fire(); }));
+      // ha-form nativo (convertito dalla v1.8.0-haform). Il campo
+      // max_events_visible è condizionale: compare solo se limit_events_visible
+      // è ON. Per farlo appare/scomparire ricostruisco schema+data a ogni
+      // value-changed che cambia quel toggle, come faceva la versione manuale.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
 
-      // Giorni da mostrare (portata dell'agenda)
-      const rowDays = document.createElement("div");
-      rowDays.className = "field-row";
-      const lblDays = document.createElement("label");
-      lblDays.textContent = t("ed_days_to_show", lang);
-      const inpDays = this._makeInput("inp-days", "number", this._config.days || 7, "narrow",
-        v => { this._config.days = parseInt(v) || 7; this._fire(); });
-      rowDays.append(lblDays, inpDays);
-      body.appendChild(rowDays);
+      const lyLabels = {
+        month_view: t("ed_month_view", lang),
+        days: t("ed_days_to_show", lang),
+        limit_events_visible: t("ed_limit_events", lang),
+        max_events_visible: t("ed_max_events_visible", lang),
+        show_week_number: t("ed_show_week_number", lang),
+        show_empty_days: t("ed_show_empty_days", lang),
+        compact_mode: t("ed_compact_mode", lang),
+      };
+      form.computeLabel = (s) => lyLabels[s.name] || s.name;
 
-      // ── Limit events visible: toggle + numero condizionale ──
-      const limitEnabled = this._config.limit_events_visible === true;
-      const rowMaxEv = document.createElement("div");
-      rowMaxEv.className = "field-row";
-      rowMaxEv.style.display = limitEnabled ? "" : "none";
-      rowMaxEv.style.paddingLeft = "16px";
-      const lblMaxEv = document.createElement("label");
-      lblMaxEv.textContent = t("ed_max_events_visible", lang);
-      const inpMaxEv = this._makeInput("inp-maxev", "number",
-        this._config.max_events_visible != null ? this._config.max_events_visible : 3, "narrow",
-        v => {
-          const n = parseInt(v);
-          this._config.max_events_visible = isNaN(n) || n < 1 ? 1 : n;
-          this._fire();
-        });
-      rowMaxEv.append(lblMaxEv, inpMaxEv);
-      body.appendChild(this._makeToggle(t("ed_limit_events", lang), limitEnabled,
-        v => {
-          this._config.limit_events_visible = v;
-          rowMaxEv.style.display = v ? "" : "none";
-          this._fire();
-        }));
-      body.appendChild(rowMaxEv);
+      const buildForm = () => {
+        const c = this._config;
+        const limitOn = c.limit_events_visible === true;
+        const data = {
+          month_view: c.month_view === true,
+          days: c.days != null ? c.days : 7,
+          limit_events_visible: limitOn,
+          show_week_number: c.show_week_number === true,
+          show_empty_days: c.show_empty_days === true,
+          compact_mode: c.compact_mode === true,
+        };
+        const schema = [
+          { name: "month_view", selector: { boolean: {} } },
+          { name: "days", selector: { number: { min: 1, max: 30, mode: "box" } } },
+          { name: "limit_events_visible", selector: { boolean: {} } },
+        ];
+        if (limitOn) {
+          data.max_events_visible = c.max_events_visible != null ? c.max_events_visible : 3;
+          schema.push({ name: "max_events_visible", selector: { number: { min: 1, max: 30, mode: "box" } } });
+        }
+        schema.push(
+          { name: "show_week_number", selector: { boolean: {} } },
+          { name: "show_empty_days", selector: { boolean: {} } },
+          { name: "compact_mode", selector: { boolean: {} } },
+        );
+        form.data = data;
+        form.schema = schema;
+      };
+      buildForm();
 
-      // Numero settimana
-      body.appendChild(this._makeToggle(t("ed_show_week_number", lang), !!this._config.show_week_number,
-        v => { this._config.show_week_number = v; this._fire(); }));
-      // Giorni vuoti
-      body.appendChild(this._makeToggle(t("ed_show_empty_days", lang), !!this._config.show_empty_days,
-        v => { this._config.show_empty_days = v; this._fire(); }));
-      // Modalità compatta
-      body.appendChild(this._makeToggle(t("ed_compact_mode", lang), this._config.compact_mode === true,
-        v => { this._config.compact_mode = v; this._fire(); }));
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        const wasLimit = this._config.limit_events_visible === true;
+        this._config.month_view = v.month_view;
+        this._config.days = v.days != null ? v.days : 7;
+        this._config.limit_events_visible = v.limit_events_visible;
+        if (v.max_events_visible != null) {
+          this._config.max_events_visible = v.max_events_visible < 1 ? 1 : v.max_events_visible;
+        }
+        this._config.show_week_number = v.show_week_number;
+        this._config.show_empty_days = v.show_empty_days;
+        this._config.compact_mode = v.compact_mode;
+        this._fire();
+        if ((v.limit_events_visible === true) !== wasLimit) {
+          buildForm();
+        }
+      });
+      body.appendChild(form);
 
       root.appendChild(wrapper);
     }
@@ -4947,55 +5002,104 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("eventdetail", t("ed_event_detail", lang), false, "mdi:eye");
 
-      body.appendChild(this._makeToggle(t("ed_show_end_time", lang), !!this._config.show_end_time,
-        v => { this._config.show_end_time = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_multi_day_events", lang), this._config.multi_day_events !== false,
-        v => { this._config.multi_day_events = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_relative_time", lang), this._config.show_relative_time !== false,
-        v => { this._config.show_relative_time = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_source", lang), !!this._config.show_source,
-        v => { this._config.show_source = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_description", lang), this._config.show_description !== false,
-        v => { this._config.show_description = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_show_location", lang), !!this._config.show_location,
-        v => { this._config.show_location = v; this._fire(); }));
-      body.appendChild(this._makeToggle(t("ed_location_clickable", lang), !!this._config.location_clickable,
-        v => { this._config.location_clickable = v; this._fire(); }));
+      // ha-form nativo (convertito dalla v1.8.0-haform). Stessi 7 toggle, stessi
+      // default (show_end_time/source/location/location_clickable → off;
+      // multi_day_events/relative_time/description → on). Salvataggio identico:
+      // value-changed aggiorna _config e chiama _fire().
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
+      const c = this._config;
+      form.data = {
+        show_end_time: c.show_end_time === true,
+        multi_day_events: c.multi_day_events !== false,
+        show_relative_time: c.show_relative_time !== false,
+        show_source: c.show_source === true,
+        show_description: c.show_description !== false,
+        show_location: c.show_location === true,
+        location_clickable: c.location_clickable === true,
+        event_progress: c.event_progress || "off",
+      };
+      form.schema = [
+        { name: "show_end_time", selector: { boolean: {} } },
+        { name: "multi_day_events", selector: { boolean: {} } },
+        { name: "show_relative_time", selector: { boolean: {} } },
+        { name: "show_source", selector: { boolean: {} } },
+        { name: "show_description", selector: { boolean: {} } },
+        { name: "show_location", selector: { boolean: {} } },
+        { name: "location_clickable", selector: { boolean: {} } },
+        { name: "event_progress", selector: { select: { mode: "dropdown", options: [
+          { value: "off", label: t("ed_progress_off", lang) },
+          { value: "line", label: t("ed_progress_line", lang) },
+        ] } } },
+      ];
+      const edLabels = {
+        show_end_time: t("ed_show_end_time", lang),
+        multi_day_events: t("ed_multi_day_events", lang),
+        show_relative_time: t("ed_show_relative_time", lang),
+        show_source: t("ed_show_source", lang),
+        show_description: t("ed_show_description", lang),
+        show_location: t("ed_show_location", lang),
+        location_clickable: t("ed_location_clickable", lang),
+        event_progress: t("ed_event_progress", lang),
+      };
+      form.computeLabel = (s) => edLabels[s.name] || s.name;
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        Object.keys(edLabels).forEach((k) => { this._config[k] = v[k]; });
+        this._fire();
+      });
+      body.appendChild(form);
 
       root.appendChild(wrapper);
     }
     {
       const { wrapper, body } = this._makeCollapsible("loc", t("ed_localization", lang), false, "mdi:translate");
 
-      body.appendChild(this._makeSelect(t("ed_lang_label", lang),
-        this._config.language || "auto",
-        [
-          { value: "auto", text: t("opt_system_default", lang) },
-          { value: "it", text: "Italiano" },
-          { value: "en", text: "English" },
-          { value: "de", text: "Deutsch" },
-          { value: "fr", text: "Français" },
-        ],
-        v => { this._config.language = v; this._fire(); }));
-
-      body.appendChild(this._makeSelect(t("ed_time_format", lang),
-        this._config.time_format || "auto",
-        [
-          { value: "auto", text: t("opt_system_default", lang) },
-          { value: "24h", text: t("opt_24h", lang) },
-          { value: "12h", text: t("opt_12h", lang) },
-        ],
-        v => { this._config.time_format = v; this._fire(); }));
-
-      body.appendChild(this._makeSelect(t("ed_first_day", lang),
-        this._config.first_day_of_week || "auto",
-        [
-          { value: "auto", text: t("opt_system_default", lang) },
-          { value: "monday", text: t("opt_monday", lang) },
-          { value: "sunday", text: t("opt_sunday", lang) },
-          { value: "saturday", text: t("opt_saturday", lang) },
-        ],
-        v => { this._config.first_day_of_week = v; this._fire(); }));
+      // ha-form nativo (convertito dalla v1.8.0-haform). Rispetto al ramo B ho
+      // ripristinato le traduzioni t(...) al posto delle label inglesi fisse e
+      // reintegrato il francese, così la sezione resta multilingua come nel custom.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
+      const c = this._config;
+      form.data = {
+        language: c.language || "auto",
+        time_format: c.time_format || "auto",
+        first_day_of_week: c.first_day_of_week || "auto",
+      };
+      form.schema = [
+        { name: "language", selector: { select: { mode: "dropdown", options: [
+          { value: "auto", label: t("opt_system_default", lang) },
+          { value: "it", label: "Italiano" },
+          { value: "en", label: "English" },
+          { value: "de", label: "Deutsch" },
+          { value: "fr", label: "Français" },
+        ] } } },
+        { name: "time_format", selector: { select: { mode: "dropdown", options: [
+          { value: "auto", label: t("opt_system_default", lang) },
+          { value: "24h", label: t("opt_24h", lang) },
+          { value: "12h", label: t("opt_12h", lang) },
+        ] } } },
+        { name: "first_day_of_week", selector: { select: { mode: "dropdown", options: [
+          { value: "auto", label: t("opt_system_default", lang) },
+          { value: "monday", label: t("opt_monday", lang) },
+          { value: "sunday", label: t("opt_sunday", lang) },
+          { value: "saturday", label: t("opt_saturday", lang) },
+        ] } } },
+      ];
+      const locLabels = {
+        language: t("ed_lang_label", lang),
+        time_format: t("ed_time_format", lang),
+        first_day_of_week: t("ed_first_day", lang),
+      };
+      form.computeLabel = (s) => locLabels[s.name] || s.name;
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        this._config.language = v.language;
+        this._config.time_format = v.time_format;
+        this._config.first_day_of_week = v.first_day_of_week;
+        this._fire();
+      });
+      body.appendChild(form);
 
       root.appendChild(wrapper);
     }
@@ -5004,22 +5108,42 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("background", t("ed_background", lang), false, "mdi:image-outline");
 
-      // Toggle sfondo trasparente
-      body.appendChild(this._makeToggle(t("ed_transparent", lang), this._config.transparent === true,
-        v => { this._config.transparent = v; this._fire(); }));
-
-      // Campo immagine di sfondo
-      const rowImg = document.createElement("div");
-      rowImg.className = "field-row stacked";
-      const lblImg = document.createElement("label");
-      lblImg.textContent = t("ed_background_image", lang);
-      const inpImg = this._makeInput("inp-bg-image", "text", this._config.background_image || "", "wide",
-        v => { this._config.background_image = v.trim() || null; this._fire(); });
-      inpImg.placeholder = "/local/bg.jpg";
-      rowImg.append(lblImg, inpImg);
-      body.appendChild(rowImg);
+      // ha-form nativo SOLO per i due campi base (transparent + background_image).
+      // Lo slider del velo resta CUSTOM (sotto), perché ha-form non ha uno slider
+      // bidirezionale con tacca centrale ed etichette chiaro/scuro.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
+      const c = this._config;
+      form.data = {
+        transparent: c.transparent === true,
+        background_image: c.background_image || "",
+      };
+      form.schema = [
+        { name: "transparent", selector: { boolean: {} } },
+        { name: "background_image", selector: { text: {} } },
+      ];
+      const bgLabels = {
+        transparent: t("ed_transparent", lang),
+        background_image: t("ed_background_image", lang),
+      };
+      form.computeLabel = (s) => bgLabels[s.name] || s.name;
+      // Lo slider velo ha senso solo con un'immagine sotto: mostralo/nascondilo.
+      const updateOverlayVisibility = () => {
+        const img = this._config.background_image;
+        ovWrap.style.display = (img && String(img).trim()) ? "" : "none";
+      };
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        this._config.transparent = v.transparent;
+        this._config.background_image = (v.background_image && v.background_image.trim())
+          ? v.background_image.trim() : null;
+        this._fire();
+        updateOverlayVisibility();
+      });
+      body.appendChild(form);
 
       // Slider del velo: da -1 (chiaro) a +1 (scuro), con tacca centrale sullo 0
+      // — CUSTOM, invariato rispetto alla versione precedente (step 0.05).
       const ovWrap = document.createElement("div");
       ovWrap.style.cssText = "margin-top: 8px;";
 
@@ -5065,6 +5189,8 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       ovWrap.append(ovLabel, ovSliderWrap, ovScale);
       body.appendChild(ovWrap);
+      // Stato iniziale: slider visibile solo se c'è già un'immagine
+      updateOverlayVisibility();
 
       root.appendChild(wrapper);
     }
@@ -5073,90 +5199,53 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("weather", t("ed_weather", lang), false, "mdi:weather-partly-cloudy");
 
-      // Master toggle: attiva/disattiva l'intera funzionalità meteo
-      const showWeather = this._config.show_weather === true;
+      // ha-form nativo (convertito dalla v1.8.0-haform). I campi (entità + toggle
+      // meteo) appaiono solo se il master show_weather è ON: ricostruisco
+      // schema+data a ogni cambio del master, come faceva la versione manuale.
+      // Il selettore entità è nativo, filtrato su weather.* — sostituisce il
+      // dropdown autocomplete custom precedente.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
 
-      // Container per i campi che appaiono solo se il toggle master è ON
-      const subFields = document.createElement("div");
-      subFields.style.display = showWeather ? "" : "none";
-      subFields.style.paddingLeft = "16px";
-
-      // Campo: weather entity (con autocompletamento delle entità weather.*)
-      // Uso lo stesso pattern dei calendari/todo: input testuale con dropdown
-      const rowEntity = document.createElement("div");
-      rowEntity.className = "field-row";
-      const lblEntity = document.createElement("label");
-      lblEntity.textContent = t("ed_weather_entity", lang);
-
-      const entityWrap = document.createElement("div");
-      entityWrap.style.position = "relative";
-      entityWrap.style.flex = "1";
-      entityWrap.style.maxWidth = "200px";
-
-      const inpEntity = document.createElement("input");
-      inpEntity.type = "text";
-      inpEntity.className = "ctc-native-input";
-      inpEntity.style.width = "100%";
-      inpEntity.value = this._config.weather_entity || "";
-      inpEntity.placeholder = "weather.home";
-      blockHAShortcuts(inpEntity);
-
-      const dropdownEntity = document.createElement("div");
-      dropdownEntity.className = "autocomplete";
-      dropdownEntity.style.display = "none";
-
-      const renderDropdownWeather = (filter) => {
-        const entities = this._getEntities("weather");
-        const filtered = entities.filter(e =>
-          e.id.includes(filter.toLowerCase()) || e.name.toLowerCase().includes(filter.toLowerCase())
-        ).slice(0, 8);
-        if (!filtered.length) { dropdownEntity.style.display = "none"; return; }
-        dropdownEntity.innerHTML = "";
-        filtered.forEach(({ id, name }) => {
-          const item = document.createElement("div");
-          item.className = "ac-item";
-          item.innerHTML = `<div class="ac-name">${name}</div><div class="ac-id">${id}</div>`;
-          item.addEventListener("mousedown", e => {
-            e.preventDefault();
-            inpEntity.value = id;
-            dropdownEntity.style.display = "none";
-            this._config.weather_entity = id;
-            this._fire();
-          });
-          dropdownEntity.appendChild(item);
-        });
-        dropdownEntity.style.display = "block";
+      const wLabels = {
+        show_weather: t("ed_show_weather", lang),
+        weather_entity: t("ed_weather_entity", lang),
+        show_weather_today: t("ed_show_weather_today", lang),
+        show_weather_per_day: t("ed_show_weather_per_day", lang),
       };
-      inpEntity.addEventListener("focus", () => renderDropdownWeather(inpEntity.value));
-      inpEntity.addEventListener("input", () => renderDropdownWeather(inpEntity.value));
-      inpEntity.addEventListener("blur", () => {
-        setTimeout(() => { dropdownEntity.style.display = "none"; }, 200);
-        this._config.weather_entity = inpEntity.value;
+      form.computeLabel = (s) => wLabels[s.name] || s.name;
+
+      const buildForm = () => {
+        const c = this._config;
+        const on = c.show_weather === true;
+        const data = { show_weather: on };
+        const schema = [{ name: "show_weather", selector: { boolean: {} } }];
+        if (on) {
+          data.weather_entity = c.weather_entity || "";
+          data.show_weather_today = c.show_weather_today !== false;
+          data.show_weather_per_day = c.show_weather_per_day === true;
+          schema.push(
+            { name: "weather_entity", selector: { entity: { domain: "weather" } } },
+            { name: "show_weather_today", selector: { boolean: {} } },
+            { name: "show_weather_per_day", selector: { boolean: {} } },
+          );
+        }
+        form.data = data;
+        form.schema = schema;
+      };
+      buildForm();
+
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        const wasOn = this._config.show_weather === true;
+        this._config.show_weather = v.show_weather;
+        if (v.weather_entity != null) this._config.weather_entity = v.weather_entity;
+        if (v.show_weather_today != null) this._config.show_weather_today = v.show_weather_today;
+        if (v.show_weather_per_day != null) this._config.show_weather_per_day = v.show_weather_per_day;
         this._fire();
+        if ((v.show_weather === true) !== wasOn) buildForm();
       });
-      entityWrap.append(inpEntity, dropdownEntity);
-      rowEntity.append(lblEntity, entityWrap);
-      subFields.appendChild(rowEntity);
-
-      // Toggle: mostra meteo "oggi" in alto
-      subFields.appendChild(this._makeToggle(t("ed_show_weather_today", lang),
-        this._config.show_weather_today !== false,
-        v => { this._config.show_weather_today = v; this._fire(); }));
-
-      // Toggle: mostra meteo per ogni giorno (sotto la data)
-      subFields.appendChild(this._makeToggle(t("ed_show_weather_per_day", lang),
-        this._config.show_weather_per_day === true,
-        v => { this._config.show_weather_per_day = v; this._fire(); }));
-
-      // Master toggle (in cima alla sezione)
-      body.appendChild(this._makeToggle(t("ed_show_weather", lang), showWeather,
-        v => {
-          this._config.show_weather = v;
-          subFields.style.display = v ? "" : "none";
-          this._fire();
-        }));
-
-      body.appendChild(subFields);
+      body.appendChild(form);
 
       root.appendChild(wrapper);
     }
@@ -5165,43 +5254,72 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("tasks", t("ed_tasks", lang), false, "mdi:checkbox-marked-circle-outline");
 
-      body.appendChild(this._makeToggle(t("ed_show_no_date", lang), this._config.show_no_date !== false,
-        v => { this._config.show_no_date = v; this._fire(); }));
+      // ha-form nativo (convertito dalla v1.8.0-haform, integrato col campo 1.9.x
+      // show_no_date in cima, default ON). I campi numero overdue_days/
+      // completed_days appaiono solo se il rispettivo toggle è attivo:
+      // ricostruisco schema+data a ogni cambio di quei toggle.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
 
-      body.appendChild(this._makeToggle(t("ed_show_overdue", lang), this._config.show_overdue !== false,
-        v => { this._config.show_overdue = v; this._fire(); }));
+      const tkLabels = {
+        show_no_date: t("ed_show_no_date", lang),
+        show_overdue: t("ed_show_overdue", lang),
+        overdue_days: t("ed_overdue_days", lang),
+        show_completed: t("ed_show_completed", lang),
+        completed_days: t("ed_completed_days", lang),
+        allow_complete: t("ed_allow_complete", lang),
+      };
+      form.computeLabel = (s) => tkLabels[s.name] || s.name;
 
-      const rowOverdueDays = document.createElement("div");
-      rowOverdueDays.className = "field-row";
-      const lblOverdueDays = document.createElement("label");
-      lblOverdueDays.textContent = t("ed_overdue_days", lang);
-      const inpOverdueDays = this._makeInput("inp-overdue-days", "number", this._config.overdue_days != null ? this._config.overdue_days : 0, "narrow",
-        v => {
-          const n = parseInt(v);
-          this._config.overdue_days = isNaN(n) || n < 0 ? 0 : n;
-          this._fire();
-        });
-      rowOverdueDays.append(lblOverdueDays, inpOverdueDays);
-      body.appendChild(rowOverdueDays);
+      const buildForm = () => {
+        const c = this._config;
+        const overdueOn = c.show_overdue !== false;
+        const completedOn = c.show_completed !== false;
+        const data = {
+          show_no_date: c.show_no_date !== false,
+          show_overdue: overdueOn,
+          show_completed: completedOn,
+          allow_complete: c.allow_complete !== false,
+        };
+        const schema = [
+          { name: "show_no_date", selector: { boolean: {} } },
+          { name: "show_overdue", selector: { boolean: {} } },
+        ];
+        if (overdueOn) {
+          data.overdue_days = c.overdue_days != null ? c.overdue_days : 0;
+          schema.push({ name: "overdue_days", selector: { number: { min: 0, max: 60, mode: "box" } } });
+        }
+        schema.push({ name: "show_completed", selector: { boolean: {} } });
+        if (completedOn) {
+          data.completed_days = c.completed_days != null ? c.completed_days : 7;
+          schema.push({ name: "completed_days", selector: { number: { min: 0, max: 60, mode: "box" } } });
+        }
+        schema.push({ name: "allow_complete", selector: { boolean: {} } });
+        form.data = data;
+        form.schema = schema;
+      };
+      buildForm();
 
-      body.appendChild(this._makeToggle(t("ed_show_completed", lang), this._config.show_completed !== false,
-        v => { this._config.show_completed = v; this._fire(); }));
-
-      const rowCompletedDays = document.createElement("div");
-      rowCompletedDays.className = "field-row";
-      const lblCompletedDays = document.createElement("label");
-      lblCompletedDays.textContent = t("ed_completed_days", lang);
-      const inpCompletedDays = this._makeInput("inp-completed-days", "number", this._config.completed_days != null ? this._config.completed_days : 7, "narrow",
-        v => {
-          const n = parseInt(v);
-          this._config.completed_days = isNaN(n) || n < 0 ? 7 : n;
-          this._fire();
-        });
-      rowCompletedDays.append(lblCompletedDays, inpCompletedDays);
-      body.appendChild(rowCompletedDays);
-
-      body.appendChild(this._makeToggle(t("ed_allow_complete", lang), this._config.allow_complete !== false,
-        v => { this._config.allow_complete = v; this._fire(); }));
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        const wasOverdue = this._config.show_overdue !== false;
+        const wasCompleted = this._config.show_completed !== false;
+        this._config.show_no_date = v.show_no_date;
+        this._config.show_overdue = v.show_overdue;
+        this._config.show_completed = v.show_completed;
+        this._config.allow_complete = v.allow_complete;
+        if (v.overdue_days != null) {
+          this._config.overdue_days = v.overdue_days < 0 ? 0 : v.overdue_days;
+        }
+        if (v.completed_days != null) {
+          this._config.completed_days = v.completed_days < 0 ? 7 : v.completed_days;
+        }
+        this._fire();
+        if ((v.show_overdue !== false) !== wasOverdue || (v.show_completed !== false) !== wasCompleted) {
+          buildForm();
+        }
+      });
+      body.appendChild(form);
 
       root.appendChild(wrapper);
     }
@@ -5278,8 +5396,19 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       const inpKw = document.createElement("input");
       inpKw.type = "text";
-      inpKw.className = "ctc-native-input";
-      inpKw.style.flex = "1";
+      inpKw.style.cssText = `
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px 9px;
+        border: none;
+        border-bottom: 1px solid var(--input-idle-line-color, var(--secondary-text-color, #888));
+        border-radius: 4px 4px 0 0;
+        background: var(--input-fill-color, var(--secondary-background-color, rgba(0,0,0,0.06)));
+        color: var(--primary-text-color);
+        font: inherit;
+        font-size: 14px;
+        box-sizing: border-box;
+      `;
       inpKw.placeholder = t("exclude_placeholder", lang);
       blockHAShortcuts(inpKw);
 
@@ -5287,13 +5416,15 @@ class CalendarTasksCardEditor extends HTMLElement {
       addBtn.type = "button";
       addBtn.textContent = t("exclude_add", lang);
       addBtn.style.cssText = `
-        padding: 6px 14px;
+        padding: 8px 16px;
         border-radius: 6px;
-        border: 1px solid var(--ctc-border);
-        background: var(--secondary-background-color, transparent);
-        color: var(--ctc-text);
+        border: none;
+        background: var(--primary-color);
+        color: var(--text-primary-color, #fff);
         cursor: pointer;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 500;
+        flex-shrink: 0;
       `;
 
       const addKeyword = () => {
@@ -5324,11 +5455,11 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       // Etichetta + help text
       const labelDiv = document.createElement("div");
-      labelDiv.style.cssText = "font-size: 13px; color: var(--ctc-text); margin-bottom: 8px;";
+      labelDiv.style.cssText = "font-size: 14px; color: var(--primary-text-color); margin-bottom: 8px; font-weight: 400;";
       labelDiv.textContent = t("exclude_keywords", lang);
 
       const helpDiv = document.createElement("div");
-      helpDiv.style.cssText = "font-size: 11px; color: var(--ctc-muted); margin-top: 8px; line-height: 1.4;";
+      helpDiv.style.cssText = "font-size: 12px; color: var(--secondary-text-color); margin-top: 8px; line-height: 1.4;";
       helpDiv.textContent = t("exclude_help", lang);
 
       body.appendChild(labelDiv);
@@ -5345,16 +5476,39 @@ class CalendarTasksCardEditor extends HTMLElement {
     // ── Interactions ──
     {
       const { wrapper, body } = this._makeCollapsible("inter", t("ed_interactions", lang), false, "mdi:gesture-tap");
-      body.classList.add("inter-compact");
-      body.appendChild(this._makeActionEditor(t("ed_tap", lang),
-        this._config.tap_action,
-        cfg => { this._config.tap_action = cfg; this._fire(); }));
-      body.appendChild(this._makeActionEditor(t("ed_hold", lang),
-        this._config.hold_action,
-        cfg => { this._config.hold_action = cfg; this._fire(); }));
-      body.appendChild(this._makeActionEditor(t("ed_double_tap", lang),
-        this._config.double_tap_action,
-        cfg => { this._config.double_tap_action = cfg; this._fire(); }));
+
+      // ha-form nativo (convertito dalla v1.8.0-haform). Il selettore ui_action
+      // gestisce da solo il tipo azione (none/navigate/url/perform-action/
+      // more-info/toggle/assist) e i campi condizionali relativi. Sostituisce i
+      // 3 _makeActionEditor custom. Default: nessuna azione.
+      const form = document.createElement("ha-form");
+      form.hass = this._hass;
+      const c = this._config;
+      form.data = {
+        tap_action: c.tap_action || { action: "none" },
+        hold_action: c.hold_action || { action: "none" },
+        double_tap_action: c.double_tap_action || { action: "none" },
+      };
+      form.schema = [
+        { name: "tap_action", selector: { ui_action: {} } },
+        { name: "hold_action", selector: { ui_action: {} } },
+        { name: "double_tap_action", selector: { ui_action: {} } },
+      ];
+      const inLabels = {
+        tap_action: t("ed_tap", lang),
+        hold_action: t("ed_hold", lang),
+        double_tap_action: t("ed_double_tap", lang),
+      };
+      form.computeLabel = (s) => inLabels[s.name] || s.name;
+      form.addEventListener("value-changed", (e) => {
+        const v = e.detail.value || {};
+        this._config.tap_action = v.tap_action;
+        this._config.hold_action = v.hold_action;
+        this._config.double_tap_action = v.double_tap_action;
+        this._fire();
+      });
+      body.appendChild(form);
+
       root.appendChild(wrapper);
     }
 
