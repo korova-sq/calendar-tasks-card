@@ -4,6 +4,10 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/korova-sq/calendar-tasks-card)](https://github.com/korova-sq/calendar-tasks-card/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/korova-sq/calendar-tasks-card?style=flat)](https://github.com/korova-sq/calendar-tasks-card/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/korova-sq/calendar-tasks-card/total?style=flat)](https://github.com/korova-sq/calendar-tasks-card/releases)
+[![Downloads@latest](https://img.shields.io/github/downloads/korova-sq/calendar-tasks-card/latest/total?style=flat)](https://github.com/korova-sq/calendar-tasks-card/releases/latest)
+[![GitHub Issues](https://img.shields.io/github/issues/korova-sq/calendar-tasks-card?style=flat)](https://github.com/korova-sq/calendar-tasks-card/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-korova.sq-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/korova.sq)
 
@@ -89,6 +93,8 @@ Both options can be enabled independently — show only one, the other, or both.
 ### HACS (recommended)
 
 Calendar & Tasks Card is not yet in the default HACS store. You can add it as a custom repository:
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=korova-sq&repository=calendar-tasks-card&category=plugin)
 
 1. Open HACS in Home Assistant
 2. Go to **Frontend**
