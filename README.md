@@ -46,7 +46,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - 🖼 **Custom background**: transparent mode or background image with a light/dark overlay
 - 🎨 **card-mod support**: style the card with [card-mod](https://github.com/thomasloven/lovelace-card-mod)
 - ➕ **Add event/task**: inline form to create calendar events and todo tasks without leaving the card
-- 🔍 **Exclude filter**: hide events and tasks with specific keywords in their titles
+- 🔍 **Filters**: hide events/tasks by keyword (`exclude`), show only matching ones (`include`), or hide duplicates across calendars
 - 🔄 **Force refresh**: button to update all integrations on demand
 - 🌐 **Internationalization**: English, Italian, German and French, auto-detects from system (card display + visual editor)
 - 🕐 **Time format**: 12h or 24h, follows system preferences
@@ -164,6 +164,8 @@ Each entity has a native Home Assistant colour picker where you can choose a the
 | `show_weather_today` | `true` | Show today's weather widget at the top of the card |
 | `show_weather_per_day` | `false` | Show weather icon+temp next to each day's date |
 | `exclude` | `[]` | List of keywords; events and tasks with titles containing any keyword will be hidden (partial match, case-insensitive) |
+| `include` | `[]` | Allowlist of keywords; when set, ONLY events and tasks whose title contains one of them are shown (partial match, case-insensitive). Applied before `exclude` |
+| `filter_duplicates` | `false` | Hide the same event/task appearing on multiple calendars/lists (events matched by title + start + end + location, tasks by title + due date; first occurrence kept) |
 
 ### 🌐 Localization
 | Option | Default | Values |
@@ -239,8 +241,10 @@ card-mod must be installed separately (via HACS). If it isn't installed, the `ca
 | `show_no_date` | `true` | Show the "No Date" section (active tasks without a due date); set to `false` to hide it |
 | `show_overdue` | `true` | Show Overdue section |
 | `overdue_days` | `0` | Limit overdue (0 = all) |
+| `overdue_position` | `bottom` | Position of the Overdue section: `bottom` (below the days) or `top` (above them) |
 | `show_completed` | `true` | Show Completed section |
 | `completed_days` | `7` | Limit completed to N days |
+| `completed_position` | `bottom` | Position of the Completed section: `bottom` or `top` |
 | `allow_complete` | `false` | Show checkbox to mark complete |
 
 ### 👆 Interactions

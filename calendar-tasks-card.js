@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.10.0
+ * calendar-tasks-card v1.11.0
  */
 
-const CARD_VERSION = "1.10.0";
+const CARD_VERSION = "1.11.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -54,6 +54,8 @@ const DEFAULT_CONFIG = {
   show_no_date: true,
   show_overdue: true,
   overdue_days: 0,
+  overdue_position: "bottom", // "bottom" (sotto i giorni) o "top" (sopra, sotto l'header)
+  completed_position: "bottom", // "bottom" o "top" (come overdue_position)
   allow_complete: false,
   show_relative_time: true,
   event_progress: "off",    // "off" (nessuna barra), "line" (linea sottile di avanzamento)
@@ -82,6 +84,8 @@ const DEFAULT_CONFIG = {
   //  -1 = chiaro pieno, 0 = nessun velo, +1 = scuro pieno
   background_overlay: 0,
   exclude: [],                    // lista di keyword: gli eventi/task con titolo che le contiene vengono nascosti
+  include: [],                    // allowlist: se non vuota, mostra SOLO eventi/task con titolo che contiene una di queste keyword
+  filter_duplicates: false,       // nasconde eventi/task duplicati (stessa firma) presenti su più calendari/liste
   entity_colors: {},
   tap_action: DEFAULT_ACTION,
   hold_action: DEFAULT_ACTION,
@@ -532,6 +536,33 @@ const STYLES = `
   }
   .ctc-section-header.overdue { color: var(--ctc-bar-overdue); }
   .ctc-section-body { display: flex; flex-direction: column; gap: 6px; }
+
+  /* Riga scaduti: etichetta "SCADUTI" nella colonna sinistra (al posto della
+     data), in rosso, centrata verticalmente. La riga usa il layout
+     .ctc-day-row per allinearsi nativamente alla griglia dei giorni. */
+  .ctc-overdue-col { justify-content: center; }
+  .ctc-overdue-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ctc-bar-overdue, #d32f2f);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  /* Riga completati: etichetta "COMPLETATI" grigia tenue nella colonna sinistra,
+     centrata. Stesso layout allineato alla griglia dei giorni. */
+  .ctc-completed-col { justify-content: center; }
+  .ctc-completed-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ctc-hint, #999);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: center;
+    line-height: 1.2;
+  }
 
   /* Cursor pointer quando ci sono azioni configurate */
   .ctc-clickable { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -1308,6 +1339,23 @@ function isExcluded(title, excludeList) {
   return false;
 }
 
+/* Speculare a isExcluded: ritorna true se il titolo contiene almeno una delle
+   keyword di include (allowlist). Se la lista è vuota/assente ritorna true —
+   cioè "nessun filtro include attivo, tutto passa". Match case-insensitive e
+   parziale, identico a isExcluded. */
+function isIncluded(title, includeList) {
+  const list = Array.isArray(includeList) ? includeList : (includeList ? [includeList] : []);
+  // Nessuna keyword valida → filtro non attivo, l'elemento passa.
+  const validKw = list.filter(kw => kw != null && String(kw).trim().length > 0);
+  if (validKw.length === 0) return true;
+  if (!title) return false; // c'è un filtro include ma il titolo è vuoto → escluso
+  const titleLower = String(title).toLowerCase();
+  for (const kw of validKw) {
+    if (titleLower.includes(String(kw).toLowerCase().trim())) return true;
+  }
+  return false;
+}
+
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
 /* Restituisce il nome breve del giorno della settimana per una data,
@@ -1409,6 +1457,9 @@ const I18N = {
     exclude_placeholder: "es. Compleanno, Riunione",
     exclude_add: "Aggiungi",
     exclude_help: "Eventi e task con titolo contenente queste parole verranno nascosti (match parziale, case-insensitive)",
+    include_keywords: "Parole chiave da includere",
+    include_placeholder: "es. Lavoro, Palestra",
+    include_help: "Se compilato, verranno mostrati SOLO eventi e task con titolo contenente queste parole (match parziale, case-insensitive)",
     // ─── Editor UI ───
     ed_entities: "Entità",
     ed_calendars: "Calendari",
@@ -1433,6 +1484,7 @@ const I18N = {
     ed_weather: "Meteo",
     ed_tasks: "Task",
     ed_filters: "Filtri",
+    ed_filter_duplicates: "Nascondi eventi duplicati",
     ed_interactions: "Interazioni",
     ed_title: "Titolo",
     ed_days_to_show: "Giorni da mostrare",
@@ -1453,6 +1505,7 @@ const I18N = {
     add_start: "Inizio",
     add_end: "Fine",
     add_due: "Scadenza (opzionale)",
+    add_due_time: "Ora (opzionale)",
     add_description: "Descrizione (opzionale)",
     add_location: "Luogo (opzionale)",
     add_saving: "Salvataggio…",
@@ -1498,6 +1551,10 @@ const I18N = {
     ed_show_no_date: "Mostra task senza data",
     ed_show_overdue: "Mostra task scaduti",
     ed_overdue_days: "Giorni scaduti da mostrare (0 = tutti)",
+    ed_overdue_position: "Posizione scaduti",
+    ed_completed_position: "Posizione completati",
+    ed_overdue_bottom: "In fondo",
+    ed_overdue_top: "In cima",
     ed_completed_days: "Giorni completati da mostrare",
     ed_show_completed: "Mostra task completati",
     ed_allow_complete: "Consenti completamento task",
@@ -1561,6 +1618,9 @@ const I18N = {
     exclude_placeholder: "e.g. Birthday, Meeting",
     exclude_add: "Add",
     exclude_help: "Events and tasks with titles containing these keywords will be hidden (partial match, case-insensitive)",
+    include_keywords: "Include keywords",
+    include_placeholder: "e.g. Work, Gym",
+    include_help: "If set, ONLY events and tasks with titles containing these keywords will be shown (partial match, case-insensitive)",
     // ─── Editor UI ───
     ed_entities: "Entities",
     ed_calendars: "Calendars",
@@ -1585,6 +1645,7 @@ const I18N = {
     ed_weather: "Weather",
     ed_tasks: "Tasks",
     ed_filters: "Filters",
+    ed_filter_duplicates: "Hide duplicate events",
     ed_interactions: "Interactions",
     ed_title: "Title",
     ed_days_to_show: "Days to show",
@@ -1605,6 +1666,7 @@ const I18N = {
     add_start: "Start",
     add_end: "End",
     add_due: "Due date (optional)",
+    add_due_time: "Time (optional)",
     add_description: "Description (optional)",
     add_location: "Location (optional)",
     add_saving: "Saving…",
@@ -1650,6 +1712,10 @@ const I18N = {
     ed_show_no_date: "Show tasks without a date",
     ed_show_overdue: "Show overdue tasks",
     ed_overdue_days: "Overdue days to show (0 = all)",
+    ed_overdue_position: "Overdue position",
+    ed_completed_position: "Completed position",
+    ed_overdue_bottom: "Bottom",
+    ed_overdue_top: "Top",
     ed_completed_days: "Completed days to show",
     ed_show_completed: "Show completed tasks",
     ed_allow_complete: "Allow completing tasks",
@@ -1714,6 +1780,9 @@ const I18N = {
     exclude_placeholder: "zb. Geburtstag, Meeting",
     exclude_add: "Hinzufügen",
     exclude_help: "Ereignisse und Aufgaben, die diese Wörter enthalten, werden nicht angezeigt",
+    include_keywords: "Wörter einschließen",
+    include_placeholder: "zb. Arbeit, Fitness",
+    include_help: "Wenn ausgefüllt, werden NUR Ereignisse und Aufgaben mit diesen Wörtern im Titel angezeigt",
     // ─── Editor UI ───
     ed_entities: "Entities",
     ed_calendars: "Kalender",
@@ -1738,6 +1807,7 @@ const I18N = {
     ed_weather: "Wetter",
     ed_tasks: "Aufgaben",
     ed_filters: "Filter",
+    ed_filter_duplicates: "Doppelte Ereignisse ausblenden",
     ed_interactions: "Interaktionen",
     ed_title: "Titel",
     ed_days_to_show: "Tage anzeigen",
@@ -1758,6 +1828,7 @@ const I18N = {
     add_start: "Beginn",
     add_end: "Ende",
     add_due: "Fällig (optional)",
+    add_due_time: "Uhrzeit (optional)",
     add_description: "Beschreibung (optional)",
     add_location: "Ort (optional)",
     add_saving: "Speichern…",
@@ -1803,6 +1874,10 @@ const I18N = {
     ed_show_no_date: "Zeige Aufgaben ohne Datum",
     ed_show_overdue: "Zeige überfällige Aufgaben",
     ed_overdue_days: "Überfällig anzeigen für X Tage (0 = Alle)",
+    ed_overdue_position: "Position überfällig",
+    ed_completed_position: "Position erledigt",
+    ed_overdue_bottom: "Unten",
+    ed_overdue_top: "Oben",
     ed_completed_days: "Erledigte Tage anzeigen",
     ed_show_completed: "Zeige erledigte Aufgaben",
     ed_allow_complete: "Erlaube Aufgaben abhaken",
@@ -1867,6 +1942,9 @@ const I18N = {
     exclude_placeholder: "ex. Anniversaire, Réunion",
     exclude_add: "Ajouter",
     exclude_help: "Les événements et tâches dont le titre contient ces mots-clés seront masqués (correspondance partielle, insensible à la casse)",
+    include_keywords: "Mots-clés à inclure",
+    include_placeholder: "ex. Travail, Gym",
+    include_help: "Si renseigné, SEULS les événements et tâches dont le titre contient ces mots-clés seront affichés (correspondance partielle, insensible à la casse)",
     // ─── Editor UI ───
     ed_entities: "Entités",
     ed_calendars: "Calendriers",
@@ -1891,6 +1969,7 @@ const I18N = {
     ed_weather: "Météo",
     ed_tasks: "Tâches",
     ed_filters: "Filtres",
+    ed_filter_duplicates: "Masquer les événements en double",
     ed_interactions: "Interactions",
     ed_title: "Titre",
     ed_days_to_show: "Jours à afficher",
@@ -1911,6 +1990,7 @@ const I18N = {
     add_start: "Début",
     add_end: "Fin",
     add_due: "Date d'échéance (facultatif)",
+    add_due_time: "Heure (facultatif)",
     add_description: "Description (facultatif)",
     add_location: "Lieu (facultatif)",
     add_saving: "Enregistrement…",
@@ -1956,6 +2036,10 @@ const I18N = {
     ed_show_no_date: "Afficher les tâches sans date",
     ed_show_overdue: "Afficher les tâches en retard",
     ed_overdue_days: "Jours de retard à afficher (0 = tous)",
+    ed_overdue_position: "Position des retards",
+    ed_completed_position: "Position terminés",
+    ed_overdue_bottom: "En bas",
+    ed_overdue_top: "En haut",
     ed_completed_days: "Jours terminés à afficher",
     ed_show_completed: "Afficher les tâches terminées",
     ed_allow_complete: "Permettre de terminer les tâches",
@@ -2768,7 +2852,7 @@ class CalendarTasksCard extends HTMLElement {
     };
 
     // Riferimenti agli input, popolati da rebuildFields
-    let inpTarget, inpTitle, inpStart, inpEnd, inpAllDay, inpDue, inpDesc, inpLoc, errBox;
+    let inpTarget, inpTitle, inpStart, inpEnd, inpAllDay, inpDue, inpDueTime, inpDesc, inpLoc, errBox;
 
     const rebuildFields = () => {
       fields.innerHTML = "";
@@ -2869,6 +2953,16 @@ class CalendarTasksCard extends HTMLElement {
         blockHAShortcuts(inpDue);
         fields.appendChild(mkField(t("add_due", lang), inpDue));
 
+        // Ora di scadenza (opzionale). Se compilata, si invia due_datetime
+        // invece di due_date. Nota: solo alcune liste todo supportano l'ora;
+        // se la lista non la supporta, HA restituirà un errore (mostrato nel
+        // box errori del dialog).
+        inpDueTime = document.createElement("input");
+        inpDueTime.type = "time";
+        inpDueTime.className = "ctc-native-input wide";
+        blockHAShortcuts(inpDueTime);
+        fields.appendChild(mkField(t("add_due_time", lang), inpDueTime));
+
         // Descrizione task (opzionale) — todo.add_item accetta description
         inpDesc = document.createElement("textarea");
         inpDesc.className = "ctc-native-input wide ctc-add-textarea";
@@ -2953,7 +3047,17 @@ class CalendarTasksCard extends HTMLElement {
         } else {
           // Task
           const data = { entity_id: target, item: title };
-          if (inpDue && inpDue.value) data.due_date = inpDue.value;
+          if (inpDue && inpDue.value) {
+            const timeVal = (inpDueTime?.value || "").trim();
+            if (timeVal) {
+              // Data + ora → due_datetime (solo liste che la supportano).
+              // Formato "YYYY-MM-DD HH:MM:SS" atteso da HA.
+              data.due_datetime = `${inpDue.value} ${timeVal}:00`;
+            } else {
+              // Solo data → due_date (funziona su tutte le liste con scadenza).
+              data.due_date = inpDue.value;
+            }
+          }
           const desc = (inpDesc?.value || "").trim();
           if (desc) data.description = desc;
           await this._hass.callService("todo", "add_item", data);
@@ -3540,15 +3644,54 @@ class CalendarTasksCard extends HTMLElement {
     const rawEvents = this._eventsRaw || [];
     const rawTasks = this._tasksRaw || [];
     const ex = this._config?.exclude;
-    // Normalizza: accetta array, stringa singola, o undefined
-    const list = Array.isArray(ex) ? ex : (typeof ex === "string" && ex.trim() ? [ex] : []);
-    if (list.length === 0) {
-      this._events = rawEvents;
-      this._tasks = rawTasks;
-      return;
+    const inc = this._config?.include;
+    // Normalizza entrambe le liste: accetta array, stringa singola, o undefined
+    const exList = Array.isArray(ex) ? ex : (typeof ex === "string" && ex.trim() ? [ex] : []);
+    const incList = Array.isArray(inc) ? inc : (typeof inc === "string" && inc.trim() ? [inc] : []);
+    const incActive = incList.filter(kw => kw != null && String(kw).trim()).length > 0;
+    const exActive = exList.length > 0;
+
+    // 1) Filtri keyword (include/exclude). Precedenza allowlist: prima si
+    //    tengono solo i match di include, poi si tolgono quelli di exclude.
+    let events = rawEvents;
+    let tasks = rawTasks;
+    if (incActive || exActive) {
+      const keep = (title) => isIncluded(title, incList) && !isExcluded(title, exList);
+      events = events.filter(ev => keep(ev.summary || ev.title));
+      tasks = tasks.filter(task => keep(task.summary || task.title));
     }
-    this._events = rawEvents.filter(ev => !isExcluded(ev.summary || ev.title, list));
-    this._tasks = rawTasks.filter(task => !isExcluded(task.summary || task.title, list));
+
+    // 2) Filtro duplicati (opzionale): stesso evento/task presente su più
+    //    calendari/liste viene mostrato una volta sola. Firma:
+    //    - eventi: titolo + inizio + fine + luogo
+    //    - task:   titolo + scadenza (due)
+    //    Si tiene la prima occorrenza (i calendari/liste in cima hanno priorità,
+    //    perché gli array grezzi seguono l'ordine della config).
+    if (this._config.filter_duplicates === true) {
+      const norm = (s) => String(s == null ? "" : s).trim().toLowerCase();
+      const seenEv = new Set();
+      events = events.filter(ev => {
+        const sig = [
+          norm(ev.summary || ev.title),
+          norm(ev.start?.dateTime || ev.start?.date),
+          norm(ev.end?.dateTime || ev.end?.date),
+          norm(ev.location),
+        ].join("|");
+        if (seenEv.has(sig)) return false;
+        seenEv.add(sig);
+        return true;
+      });
+      const seenTk = new Set();
+      tasks = tasks.filter(task => {
+        const sig = [norm(task.summary || task.title), norm(task.due)].join("|");
+        if (seenTk.has(sig)) return false;
+        seenTk.add(sig);
+        return true;
+      });
+    }
+
+    this._events = events;
+    this._tasks = tasks;
   }
 
   /* Recupera la previsione meteo daily dall'entità weather configurata.
@@ -3907,6 +4050,18 @@ class CalendarTasksCard extends HTMLElement {
     let hasContent = false;
     let lastWeekShown = null; // per inserire il banner numero settimana ai cambi
 
+    // Slot per la sezione scaduti "in cima" (overdue_position: top): un
+    // segnaposto qui, riempito più avanti quando buildOverdueSection è
+    // disponibile, così gli scaduti appaiono sotto l'header e prima dei giorni.
+    if (this._config.overdue_position === "top") {
+      card.innerHTML += `<div id="ctc-overdue-top-slot"></div>`;
+    }
+    // Slot analogo per i completati "in cima" (completed_position: top). Se
+    // entrambi sono in cima, gli scaduti vengono prima (più urgenti).
+    if (this._config.completed_position === "top") {
+      card.innerHTML += `<div id="ctc-completed-top-slot"></div>`;
+    }
+
     // ── Widget meteo "oggi" in alto (se attivato) ──
     // Recupera l'entità weather configurata e ne legge stato corrente.
     // Mostra: icona meteo, temperatura attuale, condizione (testo localizzato),
@@ -4139,8 +4294,10 @@ class CalendarTasksCard extends HTMLElement {
     }
 
     // ── Sezione globale: task SCADUTI (data nel passato, attivi) ──
-    if (this._config.show_overdue !== false && overdueActive.length > 0) {
-      hasContent = true;
+    // Generata come funzione così può essere inserita in cima (sotto l'header)
+    // o in fondo, a seconda di overdue_position.
+    const buildOverdueSection = () => {
+      if (this._config.show_overdue === false || overdueActive.length === 0) return "";
       // Ordina per data più vecchia prima (il più scaduto in cima)
       overdueActive.sort((a, b) => parseDueDate(a.due) - parseDueDate(b.due));
       const overdueGroups = new Map();
@@ -4148,15 +4305,32 @@ class CalendarTasksCard extends HTMLElement {
         if (!overdueGroups.has(task._source)) overdueGroups.set(task._source, []);
         overdueGroups.get(task._source).push(task);
       });
-      const groupsHtml = [...overdueGroups.values()].map(items => {
+      const groupsHtml = [...overdueGroups.entries()].map(([sourceId, items]) => {
+        const groupColor = getEntityColor(sourceId, this._config);
         const rowsHtml = items.map(t => renderTaskRow(t, false)).join("");
-        return `<div class="ctc-event-group"><div class="ctc-bar overdue"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
-      card.innerHTML += `
-        <div class="ctc-section">
-          <div class="ctc-section-header overdue">${t("overdue", lang)}</div>
-          <div class="ctc-section-body">${groupsHtml}</div>
+      // Layout come una riga-giorno: colonna sinistra con icona + etichetta
+      // "scaduti" (al posto di data), gruppi task a destra. Così è allineato
+      // nativamente alla griglia dei giorni.
+      return `
+        <div class="ctc-day-row ctc-overdue-row">
+          <div class="ctc-date-col ctc-overdue-col">
+            <div class="ctc-overdue-label">${t("overdue", lang)}</div>
+          </div>
+          <div class="ctc-events-col">${groupsHtml}</div>
         </div>`;
+    };
+    const overdueIsTop = this._config.overdue_position === "top";
+    let overdueTopHtml = ""; // riempito dopo, alla fine, per evitare che gli
+                             // innerHTML += successivi interferiscano col slot
+    let completedTopHtml = ""; // idem per i completati "in cima"
+    if (!overdueIsTop) {
+      const overdueHtml = buildOverdueSection();
+      if (overdueHtml) { hasContent = true; card.innerHTML += overdueHtml; }
+    } else {
+      overdueTopHtml = buildOverdueSection();
+      if (overdueTopHtml) hasContent = true;
     }
 
     // ── Sezione globale: COMPLETATI (solo se toggle on) ──
@@ -4179,8 +4353,8 @@ class CalendarTasksCard extends HTMLElement {
         return ref.getTime() >= cutoffMs;
       };
       const allCompleted = [...allCompletedWithDate, ...undatedCompleted].filter(isWithinCompletedWindow);
-      if (allCompleted.length > 0) {
-        hasContent = true;
+      const buildCompletedSection = () => {
+        if (allCompleted.length === 0) return "";
         // Ordina per data più recente prima (i senza data finiscono in fondo)
         allCompleted.sort((a, b) => {
           const da = parseDueDate(a.due);
@@ -4200,17 +4374,42 @@ class CalendarTasksCard extends HTMLElement {
           const rowsHtml = items.map(t => renderTaskRow(t, true)).join("");
           return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor};opacity:0.4"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
         }).join("");
-        card.innerHTML += `
-          <div class="ctc-section">
-            <div class="ctc-section-header">${t("completed", lang)}</div>
-            <div class="ctc-section-body">${groupsHtml}</div>
+        // Layout come una riga-giorno: "COMPLETATI" (grigio tenue) nella colonna
+        // sinistra al posto della data, gruppi task a destra. Allineato alla
+        // griglia dei giorni.
+        return `
+          <div class="ctc-day-row ctc-completed-row">
+            <div class="ctc-date-col ctc-completed-col">
+              <div class="ctc-completed-label">${t("completed", lang)}</div>
+            </div>
+            <div class="ctc-events-col">${groupsHtml}</div>
           </div>`;
+      };
+      const completedIsTop = this._config.completed_position === "top";
+      if (allCompleted.length > 0) {
+        hasContent = true;
+        if (completedIsTop) {
+          completedTopHtml = buildCompletedSection();
+        } else {
+          card.innerHTML += buildCompletedSection();
+        }
       }
     }
     if (!hasContent) {
       const noEventsFn = t("no_events", lang);
       const noEventsText = typeof noEventsFn === "function" ? noEventsFn(numDays) : noEventsFn;
       card.innerHTML += `<div class="ctc-empty">${noEventsText}</div>`;
+    }
+
+    // Riempie lo slot degli scaduti "in cima" ORA, dopo che tutti gli
+    // innerHTML += sono stati eseguiti, così nessuna ri-serializzazione lo tocca.
+    if (overdueIsTop && overdueTopHtml) {
+      const slot = card.querySelector("#ctc-overdue-top-slot");
+      if (slot) slot.innerHTML = overdueTopHtml;
+    }
+    if (this._config.completed_position === "top" && completedTopHtml) {
+      const slot = card.querySelector("#ctc-completed-top-slot");
+      if (slot) slot.innerHTML = completedTopHtml;
     }
 
     } // fine if (!monthView): costruzione agenda
@@ -4494,6 +4693,16 @@ class CalendarTasksCardEditor extends HTMLElement {
       result.exclude = [config.exclude.trim()];
     }
 
+    // include (allowlist): stesso trattamento di exclude.
+    if (Array.isArray(config.include)) {
+      const cleaned = config.include.filter(kw => kw != null && String(kw).trim().length > 0);
+      if (cleaned.length > 0) {
+        result.include = cleaned;
+      }
+    } else if (typeof config.include === "string" && config.include.trim().length > 0) {
+      result.include = [config.include.trim()];
+    }
+
     // card_mod: non è un'opzione della card ma va preservata nel YAML, altrimenti
     // gli stili di card-mod verrebbero persi al salvataggio dall'editor.
     if (config.card_mod !== undefined) {
@@ -4512,56 +4721,6 @@ class CalendarTasksCardEditor extends HTMLElement {
     if (daysInp && daysInp !== document.activeElement) daysInp.value = this._config.days || 7;
   }
 
-  _makeInput(id, type, value, extraClass, onChange) {
-    const inp = document.createElement("input");
-    inp.id = id;
-    inp.type = type;
-    inp.value = value;
-    inp.className = `ctc-native-input ${extraClass}`;
-    if (type === "number") { inp.min = "1"; inp.max = "30"; }
-
-    // Blocca shortcut HA intercettando in capture sul documento
-    blockHAShortcuts(inp);
-
-    inp.addEventListener("change", e => onChange(e.target.value));
-    return inp;
-  }
-
-  _makeToggle(label, checked, onChange) {
-    const row = document.createElement("div");
-    row.className = "toggle-row";
-    const lbl = document.createElement("label");
-    lbl.textContent = label;
-    const sw = document.createElement("ha-switch");
-    sw.checked = checked;
-    sw.addEventListener("change", e => onChange(e.target.checked));
-    row.append(lbl, sw);
-    return row;
-  }
-
-  /* Crea un dropdown select stilizzato. options = [{value, text}, ...] */
-  _makeSelect(label, currentValue, options, onChange) {
-    const row = document.createElement("div");
-    row.className = "field-row";
-    const lbl = document.createElement("label");
-    lbl.textContent = label;
-    const sel = document.createElement("select");
-    sel.className = "ctc-native-input wide";
-    blockHAShortcuts(sel);
-    options.forEach(opt => {
-      const o = document.createElement("option");
-      o.value = opt.value;
-      o.textContent = opt.text;
-      if (opt.value === currentValue) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.addEventListener("change", () => onChange(sel.value));
-    row.append(lbl, sel);
-    return row;
-  }
-
-  /* Crea una sezione collassabile nativa (<details>/<summary>).
-     Restituisce { wrapper, body } — il body è dove l'editor aggiunge i campi. */
   _makeCollapsible(id, title, defaultOpen = false, icon = null) {
     // Struttura nativa <details>/<summary> (stessa della sun-weather e
     // world-clock card) per un look coerente tra le card. L'apri/chiudi è
@@ -4605,112 +4764,6 @@ class CalendarTasksCardEditor extends HTMLElement {
 
     wrapper.append(summary, body);
     return { wrapper, body };
-  }
-
-  /* Editor per una singola azione (tap/hold/double_tap). Mostra il select
-     dell'azione e, in base al tipo selezionato, i campi parametri dinamici. */
-  _makeActionEditor(label, currentConfig, onChange) {
-    const wrap = document.createElement("div");
-    wrap.className = "action-editor";
-
-    const lbl = document.createElement("div");
-    lbl.className = "action-label";
-    lbl.textContent = label;
-    wrap.appendChild(lbl);
-
-    const cfg = currentConfig || { action: "none" };
-
-    // Riga 1: select azione
-    const row1 = document.createElement("div");
-    row1.className = "field-row";
-    const selLbl = document.createElement("label");
-    selLbl.textContent = t("ed_action", this._lang());
-    const sel = document.createElement("select");
-    sel.className = "ctc-native-input wide";
-    blockHAShortcuts(sel);
-    const options = [
-      { value: "none", text: t("ed_act_none", this._lang()) },
-      { value: "more-info", text: t("ed_act_more_info", this._lang()) },
-      { value: "toggle", text: t("ed_act_toggle", this._lang()) },
-      { value: "navigate", text: t("ed_act_navigate", this._lang()) },
-      { value: "url", text: t("ed_act_url", this._lang()) },
-      { value: "call-service", text: t("ed_act_call_service", this._lang()) },
-      { value: "assist", text: t("ed_act_assist", this._lang()) },
-    ];
-    options.forEach(opt => {
-      const o = document.createElement("option");
-      o.value = opt.value;
-      o.textContent = opt.text;
-      if (opt.value === cfg.action) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.addEventListener("change", () => {
-      const newAction = sel.value;
-      // Reset solo l'azione, preserva eventuali parametri specifici
-      const newCfg = { action: newAction };
-      onChange(newCfg);
-      renderParams(newCfg);
-    });
-    row1.append(selLbl, sel);
-    wrap.appendChild(row1);
-
-    // Container parametri (dinamico)
-    const paramsContainer = document.createElement("div");
-    paramsContainer.className = "action-params";
-    wrap.appendChild(paramsContainer);
-
-    const renderParams = (c) => {
-      paramsContainer.innerHTML = "";
-      const a = c.action;
-
-      const addParam = (label, value, key, placeholder) => {
-        const row = document.createElement("div");
-        row.className = "field-row";
-        const l = document.createElement("label");
-        l.textContent = label;
-        const inp = document.createElement("input");
-        inp.type = "text";
-        inp.className = "ctc-native-input wide";
-        inp.value = value || "";
-        if (placeholder) inp.placeholder = placeholder;
-        blockHAShortcuts(inp);
-        inp.addEventListener("change", () => {
-          const updated = { ...c, [key]: inp.value };
-          onChange(updated);
-        });
-        row.append(l, inp);
-        paramsContainer.appendChild(row);
-      };
-
-      if (a === "navigate") addParam(t("ed_param_path", this._lang()), c.navigation_path, "navigation_path", "/lovelace/home");
-      else if (a === "url") addParam(t("ed_param_url", this._lang()), c.url_path, "url_path", "https://...");
-      else if (a === "call-service") {
-        addParam(t("ed_param_service", this._lang()), c.service, "service", "domain.service");
-        // Per service_data accettiamo JSON
-        const row = document.createElement("div");
-        row.className = "field-row";
-        const l = document.createElement("label");
-        l.textContent = t("ed_data_json", this._lang());
-        const inp = document.createElement("input");
-        inp.type = "text";
-        inp.className = "ctc-native-input wide";
-        inp.value = c.data ? JSON.stringify(c.data) : "";
-        inp.placeholder = '{"entity_id": "light.x"}';
-        blockHAShortcuts(inp);
-        inp.addEventListener("change", () => {
-          let parsed = {};
-          try { if (inp.value.trim()) parsed = JSON.parse(inp.value); } catch (e) { /* ignora */ }
-          const updated = { ...c, data: parsed };
-          onChange(updated);
-        });
-        row.append(l, inp);
-        paramsContainer.appendChild(row);
-      }
-      else if (a === "more-info" || a === "toggle") addParam(t("ed_param_entity", this._lang()), c.entity, "entity", "domain.entity");
-    };
-    renderParams(cfg);
-
-    return wrap;
   }
 
   _makeEntityRow(type, entityId, index) {
@@ -5265,6 +5318,8 @@ class CalendarTasksCardEditor extends HTMLElement {
         show_no_date: t("ed_show_no_date", lang),
         show_overdue: t("ed_show_overdue", lang),
         overdue_days: t("ed_overdue_days", lang),
+        overdue_position: t("ed_overdue_position", lang),
+        completed_position: t("ed_completed_position", lang),
         show_completed: t("ed_show_completed", lang),
         completed_days: t("ed_completed_days", lang),
         allow_complete: t("ed_allow_complete", lang),
@@ -5288,11 +5343,21 @@ class CalendarTasksCardEditor extends HTMLElement {
         if (overdueOn) {
           data.overdue_days = c.overdue_days != null ? c.overdue_days : 0;
           schema.push({ name: "overdue_days", selector: { number: { min: 0, max: 60, mode: "box" } } });
+          data.overdue_position = c.overdue_position || "bottom";
+          schema.push({ name: "overdue_position", selector: { select: { mode: "dropdown", options: [
+            { value: "bottom", label: t("ed_overdue_bottom", lang) },
+            { value: "top", label: t("ed_overdue_top", lang) },
+          ] } } });
         }
         schema.push({ name: "show_completed", selector: { boolean: {} } });
         if (completedOn) {
           data.completed_days = c.completed_days != null ? c.completed_days : 7;
           schema.push({ name: "completed_days", selector: { number: { min: 0, max: 60, mode: "box" } } });
+          data.completed_position = c.completed_position || "bottom";
+          schema.push({ name: "completed_position", selector: { select: { mode: "dropdown", options: [
+            { value: "bottom", label: t("ed_overdue_bottom", lang) },
+            { value: "top", label: t("ed_overdue_top", lang) },
+          ] } } });
         }
         schema.push({ name: "allow_complete", selector: { boolean: {} } });
         form.data = data;
@@ -5311,8 +5376,14 @@ class CalendarTasksCardEditor extends HTMLElement {
         if (v.overdue_days != null) {
           this._config.overdue_days = v.overdue_days < 0 ? 0 : v.overdue_days;
         }
+        if (v.overdue_position != null) {
+          this._config.overdue_position = v.overdue_position;
+        }
         if (v.completed_days != null) {
           this._config.completed_days = v.completed_days < 0 ? 7 : v.completed_days;
+        }
+        if (v.completed_position != null) {
+          this._config.completed_position = v.completed_position;
         }
         this._fire();
         if ((v.show_overdue !== false) !== wasOverdue || (v.show_completed !== false) !== wasCompleted) {
@@ -5328,147 +5399,107 @@ class CalendarTasksCardEditor extends HTMLElement {
     {
       const { wrapper, body } = this._makeCollapsible("filters", t("ed_filters", lang), false, "mdi:filter-variant");
 
-      // Stato locale: array di keyword corrente
-      const getExcludeList = () => {
-        const ex = this._config.exclude;
-        if (Array.isArray(ex)) return [...ex];
-        if (typeof ex === "string" && ex.trim().length > 0) return [ex];
-        return [];
-      };
-
-      // Container per i chip delle keyword esistenti
-      const chipsContainer = document.createElement("div");
-      chipsContainer.style.display = "flex";
-      chipsContainer.style.flexWrap = "wrap";
-      chipsContainer.style.gap = "6px";
-      chipsContainer.style.marginBottom = "8px";
-      chipsContainer.style.minHeight = "24px";
-
-      // Funzione di rendering dei chip
-      const renderChips = () => {
-        chipsContainer.innerHTML = "";
-        const list = getExcludeList();
-        list.forEach((kw, idx) => {
-          const chip = document.createElement("span");
-          chip.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: var(--secondary-background-color, rgba(0,0,0,0.05));
-            border-radius: 16px;
-            font-size: 13px;
-            color: var(--ctc-text);
-          `;
-          chip.textContent = kw;
-          // Pulsante "x" per rimuovere
-          const removeBtn = document.createElement("button");
-          removeBtn.type = "button";
-          removeBtn.textContent = "×";
-          removeBtn.style.cssText = `
-            border: none;
-            background: transparent;
-            color: var(--ctc-muted);
-            cursor: pointer;
-            font-size: 18px;
-            line-height: 1;
-            padding: 0;
-            margin: 0;
-            font-weight: bold;
-          `;
-          removeBtn.addEventListener("click", () => {
-            const newList = getExcludeList();
-            newList.splice(idx, 1);
-            this._config.exclude = newList;
-            renderChips();
-            this._fire();
-          });
-          chip.appendChild(removeBtn);
-          chipsContainer.appendChild(chip);
-        });
-      };
-
-      // Riga input + bottone Aggiungi
-      const inputRow = document.createElement("div");
-      inputRow.style.display = "flex";
-      inputRow.style.gap = "8px";
-      inputRow.style.alignItems = "center";
-
-      const inpKw = document.createElement("input");
-      inpKw.type = "text";
-      inpKw.style.cssText = `
-        flex: 1;
-        min-width: 0;
-        padding: 10px 12px 9px;
-        border: none;
-        border-bottom: 1px solid var(--input-idle-line-color, var(--secondary-text-color, #888));
-        border-radius: 4px 4px 0 0;
-        background: var(--input-fill-color, var(--secondary-background-color, rgba(0,0,0,0.06)));
-        color: var(--primary-text-color);
-        font: inherit;
-        font-size: 14px;
-        box-sizing: border-box;
-      `;
-      inpKw.placeholder = t("exclude_placeholder", lang);
-      blockHAShortcuts(inpKw);
-
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.textContent = t("exclude_add", lang);
-      addBtn.style.cssText = `
-        padding: 8px 16px;
-        border-radius: 6px;
-        border: none;
-        background: var(--primary-color);
-        color: var(--text-primary-color, #fff);
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        flex-shrink: 0;
-      `;
-
-      const addKeyword = () => {
-        const value = inpKw.value.trim();
-        if (!value) return;
-        const list = getExcludeList();
-        // Evita duplicati (case-insensitive)
-        if (list.some(kw => String(kw).toLowerCase() === value.toLowerCase())) {
-          inpKw.value = "";
-          return;
-        }
-        list.push(value);
-        this._config.exclude = list;
-        inpKw.value = "";
-        renderChips();
+      // Toggle "Nascondi duplicati" in cima alla sezione (ha-form nativo).
+      const dupForm = document.createElement("ha-form");
+      dupForm.hass = this._hass;
+      dupForm.data = { filter_duplicates: this._config.filter_duplicates === true };
+      dupForm.schema = [{ name: "filter_duplicates", selector: { boolean: {} } }];
+      dupForm.computeLabel = () => t("ed_filter_duplicates", lang);
+      dupForm.addEventListener("value-changed", (e) => {
+        this._config.filter_duplicates = (e.detail.value || {}).filter_duplicates === true;
         this._fire();
+      });
+      body.appendChild(dupForm);
+      const dupSep = document.createElement("div");
+      dupSep.style.cssText = "height:1px;background:var(--divider-color, rgba(127,127,127,0.2));margin:16px 0;";
+      body.appendChild(dupSep);
+
+      // Costruisce un tag-input (chip + campo + Aggiungi) per una lista di
+      // keyword salvata in this._config[configKey]. Riutilizzato per exclude
+      // (blocklist) e include (allowlist), che condividono struttura e stile.
+      const buildKeywordInput = (configKey, labelKey, placeholderKey, helpKey) => {
+        const getList = () => {
+          const v = this._config[configKey];
+          if (Array.isArray(v)) return [...v];
+          if (typeof v === "string" && v.trim().length > 0) return [v];
+          return [];
+        };
+
+        const chipsContainer = document.createElement("div");
+        chipsContainer.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:24px;";
+
+        const renderChips = () => {
+          chipsContainer.innerHTML = "";
+          getList().forEach((kw, idx) => {
+            const chip = document.createElement("span");
+            chip.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--secondary-background-color, rgba(0,0,0,0.05));border-radius:16px;font-size:13px;color:var(--ctc-text);";
+            chip.textContent = kw;
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.textContent = "×";
+            removeBtn.style.cssText = "border:none;background:transparent;color:var(--ctc-muted);cursor:pointer;font-size:18px;line-height:1;padding:0;margin:0;font-weight:bold;";
+            removeBtn.addEventListener("click", () => {
+              const newList = getList();
+              newList.splice(idx, 1);
+              this._config[configKey] = newList;
+              renderChips();
+              this._fire();
+            });
+            chip.appendChild(removeBtn);
+            chipsContainer.appendChild(chip);
+          });
+        };
+
+        const inputRow = document.createElement("div");
+        inputRow.style.cssText = "display:flex;gap:8px;align-items:center;";
+
+        const inpKw = document.createElement("input");
+        inpKw.type = "text";
+        inpKw.style.cssText = "flex:1;min-width:0;padding:10px 12px 9px;border:none;border-bottom:1px solid var(--input-idle-line-color, var(--secondary-text-color, #888));border-radius:4px 4px 0 0;background:var(--input-fill-color, var(--secondary-background-color, rgba(0,0,0,0.06)));color:var(--primary-text-color);font:inherit;font-size:14px;box-sizing:border-box;";
+        inpKw.placeholder = t(placeholderKey, lang);
+        blockHAShortcuts(inpKw);
+
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.textContent = t("exclude_add", lang);
+        addBtn.style.cssText = "padding:8px 16px;border-radius:6px;border:none;background:var(--primary-color);color:var(--text-primary-color, #fff);cursor:pointer;font-size:14px;font-weight:500;flex-shrink:0;";
+
+        const addKeyword = () => {
+          const value = inpKw.value.trim();
+          if (!value) return;
+          const list = getList();
+          if (list.some(kw => String(kw).toLowerCase() === value.toLowerCase())) { inpKw.value = ""; return; }
+          list.push(value);
+          this._config[configKey] = list;
+          inpKw.value = "";
+          renderChips();
+          this._fire();
+        };
+        addBtn.addEventListener("click", addKeyword);
+        inpKw.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } });
+        inputRow.append(inpKw, addBtn);
+
+        const labelDiv = document.createElement("div");
+        labelDiv.style.cssText = "font-size:14px;color:var(--primary-text-color);margin-bottom:8px;font-weight:400;";
+        labelDiv.textContent = t(labelKey, lang);
+
+        const helpDiv = document.createElement("div");
+        helpDiv.style.cssText = "font-size:12px;color:var(--secondary-text-color);margin-top:8px;line-height:1.4;";
+        helpDiv.textContent = t(helpKey, lang);
+
+        body.appendChild(labelDiv);
+        body.appendChild(chipsContainer);
+        body.appendChild(inputRow);
+        body.appendChild(helpDiv);
+        renderChips();
       };
 
-      addBtn.addEventListener("click", addKeyword);
-      inpKw.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addKeyword();
-        }
-      });
-
-      inputRow.append(inpKw, addBtn);
-
-      // Etichetta + help text
-      const labelDiv = document.createElement("div");
-      labelDiv.style.cssText = "font-size: 14px; color: var(--primary-text-color); margin-bottom: 8px; font-weight: 400;";
-      labelDiv.textContent = t("exclude_keywords", lang);
-
-      const helpDiv = document.createElement("div");
-      helpDiv.style.cssText = "font-size: 12px; color: var(--secondary-text-color); margin-top: 8px; line-height: 1.4;";
-      helpDiv.textContent = t("exclude_help", lang);
-
-      body.appendChild(labelDiv);
-      body.appendChild(chipsContainer);
-      body.appendChild(inputRow);
-      body.appendChild(helpDiv);
-
-      // Rendering iniziale
-      renderChips();
+      // Allowlist (include) in cima, poi blocklist (exclude), con un separatore.
+      buildKeywordInput("include", "include_keywords", "include_placeholder", "include_help");
+      const sep = document.createElement("div");
+      sep.style.cssText = "height:1px;background:var(--divider-color, rgba(127,127,127,0.2));margin:16px 0;";
+      body.appendChild(sep);
+      buildKeywordInput("exclude", "exclude_keywords", "exclude_placeholder", "exclude_help");
 
       root.appendChild(wrapper);
     }

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-09-19
+
+### Added
+- **Overdue section position** — new `overdue_position` option (`bottom` / `top`) to show the overdue section above the days instead of below, giving overdue tasks more prominence.
+- **Completed section position** — new `completed_position` option (`bottom` / `top`), same as overdue. When both are set to `top`, overdue comes first.
+- **Allowlist filter** — new `include` keyword list: when set, ONLY events and tasks whose title contains one of the keywords are shown (the counterpart to `exclude`). Allowlist takes precedence, then `exclude` is applied.
+- **Duplicate filter** — new `filter_duplicates` option: hides the same event/task appearing on multiple calendars/lists. Events are matched by title + start + end + location; tasks by title + due date. The first occurrence (by calendar/list order) is kept.
+- **Task time in the add dialog** — the "add" dialog now has an optional time field for tasks: leave it empty for a date-only due (`due_date`), or set it for a date+time due (`due_datetime`, on lists that support it).
+
+### Changed
+- **Overdue & completed restyle** — both sections now align with the day grid: the coloured bar follows each list's colour (instead of a fixed red), and the section label ("Overdue" in red, "Completed" in grey) sits in the left column where the date would be, for a unified look. Overdue tasks stay grouped by list.
+
+### Maintenance
+- Removed ~200 lines of dead editor code left over from the ha-form migration.
+
+[1.11.0]: https://github.com/korova-sq/calendar-tasks-card/compare/v1.10.0...v1.11.0
+
+
 ## [1.10.0] - 2026-09-01
 
 ### Added
