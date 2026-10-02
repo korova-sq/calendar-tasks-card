@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-09-30
+
+### Added
+- **Chronological sorting** — events and tasks are now ordered by time within each day (all-day events at the top, timed items in time order, undated tasks at the bottom). Consecutive items from the same source share a single coloured bar. A timed task now falls into its correct slot between events instead of being listed after them. Thanks @neumannk for the report (#14).
+- **Sort mode option** — new `sort_mode` (`chronological` default / `grouped`). `grouped` restores the previous behaviour (events grouped by calendar, then tasks grouped by list). Applies to both the agenda view and the day popup.
+- **Start offset** — new `start_days_ahead` option (in Filters): shifts where the agenda starts (0 = today, 1 = tomorrow, 7 = in a week). It counts calendar days, so future events are never skipped. Overdue and completed are unaffected.
+- **Highlight weekend** — new `highlight_weekend` option (default on): Saturdays and Sundays show their date in red.
+
+### Changed
+- When "show empty days" is off, `days` now counts **days that actually have events**: the card looks ahead (up to ~6 months) until it has shown `days` non-empty days, so events spread far apart are no longer hidden. With "show empty days" on, behaviour is unchanged (N calendar days).
+
+[1.12.0]: https://github.com/korova-sq/calendar-tasks-card/compare/v1.11.0...v1.12.0
+
+
 ## [1.11.0] - 2026-09-19
 
 ### Added

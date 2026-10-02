@@ -166,6 +166,7 @@ Each entity has a native Home Assistant colour picker where you can choose a the
 | `exclude` | `[]` | List of keywords; events and tasks with titles containing any keyword will be hidden (partial match, case-insensitive) |
 | `include` | `[]` | Allowlist of keywords; when set, ONLY events and tasks whose title contains one of them are shown (partial match, case-insensitive). Applied before `exclude` |
 | `filter_duplicates` | `false` | Hide the same event/task appearing on multiple calendars/lists (events matched by title + start + end + location, tasks by title + due date; first occurrence kept) |
+| `start_days_ahead` | `0` | Shift where the agenda starts: `0` = today, `1` = tomorrow, `7` = in a week. Counts calendar days (future events are never skipped). Overdue and completed are not affected |
 
 ### 🌐 Localization
 | Option | Default | Values |
@@ -178,10 +179,12 @@ Each entity has a native Home Assistant colour picker where you can choose a the
 | Option | Default | Description |
 |---|---|---|
 | `month_view` | `false` | Show a monthly calendar grid instead of the agenda list, with event dots, a tap-a-day popup and month navigation |
+| `sort_mode` | `chronological` | How items are ordered within a day: `chronological` (events and tasks mixed by time) or `grouped` (events grouped by calendar, then tasks grouped by list) |
 | `show_week_number` | `false` | ISO 8601 week separators (agenda) / week-number column (grid) |
+| `highlight_weekend` | `true` | Show Saturday/Sunday dates in red |
 | `show_end_time` | `false` | Show `HH:MM–HH:MM` for events |
 | `multi_day_events` | `true` | Show multi-day events on every day they span, with a `(2/6)` day counter |
-| `show_empty_days` | `false` | Show days with no events |
+| `show_empty_days` | `false` | Show days with no events. When off, `days` counts days that actually have events (the card looks ahead up to ~6 months), so events spread far apart are not hidden |
 | `show_relative_time` | `true` | Relative time labels: "Tomorrow", "In 3 days", and — for imminent items with a precise time — "In 3 hours" / "In 45 min" |
 | `event_progress` | `off` | Progress bar for an event currently in progress: `off` or `line` (a thin bar under the event, filled in the calendar's colour). Mutually exclusive with the relative-time label on the same event |
 | `show_source` | `false` | Show entity name as subtitle |

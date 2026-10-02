@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.11.0
+ * calendar-tasks-card v1.12.0
  */
 
-const CARD_VERSION = "1.11.0";
+const CARD_VERSION = "1.12.0";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -60,10 +60,13 @@ const DEFAULT_CONFIG = {
   show_relative_time: true,
   event_progress: "off",    // "off" (nessuna barra), "line" (linea sottile di avanzamento)
   show_week_number: false,
+  highlight_weekend: true,  // evidenzia sabato/domenica con la data in rosso
   show_collapse_button: true,
   time_format: "auto",      // "auto" (segue locale), "12h", "24h"
   first_day_of_week: "auto", // "auto" (segue locale), "monday", "sunday", "saturday"
   month_view: false,        // false = vista agenda (lista), true = vista griglia mensile
+  sort_mode: "chronological", // "chronological" (eventi+task per orario) o "grouped" (raggruppati per calendario/lista)
+  start_days_ahead: 0,      // sposta il giorno di partenza dell'agenda: 0 = oggi, 1 = domani, 7 = tra una settimana
   language: "auto",         // "auto" (locale del browser/HA), "en" (inglese), "it" (italiano)
   refresh_interval: 300,
   limit_events_visible: false,    // se true, attiva la scrollbar e mostra solo max_events_visible giorni
@@ -296,6 +299,14 @@ const STYLES = `
     letter-spacing: 0.06em;
     margin-top: 0;
     font-weight: 600;
+  }
+
+  /* Weekend (sabato/domenica): giorno, numero e mese in rosso tenue. Il numero
+     di "oggi" mantiene il suo stile (pallino) anche se cade di weekend. */
+  .ctc-day-row.weekend .ctc-date-wd,
+  .ctc-day-row.weekend .ctc-date-num:not(.today),
+  .ctc-day-row.weekend .ctc-date-month {
+    color: #e06666;
   }
 
   /* ─── Eventi a destra ─── */
@@ -1488,6 +1499,8 @@ const I18N = {
     ed_interactions: "Interazioni",
     ed_title: "Titolo",
     ed_days_to_show: "Giorni da mostrare",
+    ed_start_days_ahead: "Inizia tra (giorni)",
+    ed_start_days_ahead_help: "Sposta l'inizio dell'agenda: 0 (o vuoto) = da oggi, 1 = da domani, 7 = tra una settimana. Scaduti e completati non sono influenzati.",
     ed_max_events_visible: "Numero massimo eventi visibili",
     ed_show_title: "Mostra titolo",
     ed_show_current_date: "Mostra data corrente",
@@ -1519,12 +1532,16 @@ const I18N = {
     ed_limit_events: "Limita eventi visibili (attiva scrollbar)",
     ed_compact_mode: "Modalità compatta (spazi ridotti)",
     ed_show_week_number: "Mostra numero settimana",
+    ed_highlight_weekend: "Evidenzia weekend",
     ed_show_end_time: "Mostra orario di fine",
     ed_event_progress: "Barra di avanzamento",
     ed_progress_off: "Nessuna",
     ed_progress_line: "Linea",
     ed_multi_day_events: "Mostra eventi multi-giorno in tutti i giorni",
     ed_month_view: "Vista calendario mensile (griglia)",
+    ed_sort_mode: "Ordinamento",
+    ed_sort_chronological: "Per orario",
+    ed_sort_grouped: "Per calendario",
     day_no_events: "Nessun evento o task",
     month_pick: "Vai al mese",
     month_label: "Mese",
@@ -1649,6 +1666,8 @@ const I18N = {
     ed_interactions: "Interactions",
     ed_title: "Title",
     ed_days_to_show: "Days to show",
+    ed_start_days_ahead: "Start in (days)",
+    ed_start_days_ahead_help: "Shifts where the agenda starts: 0 (or empty) = from today, 1 = from tomorrow, 7 = in a week. Overdue and completed are not affected.",
     ed_max_events_visible: "Max events visible",
     ed_show_title: "Show title",
     ed_show_current_date: "Show current date",
@@ -1680,12 +1699,16 @@ const I18N = {
     ed_limit_events: "Limit visible events (enable scrollbar)",
     ed_compact_mode: "Compact mode (reduced spacing)",
     ed_show_week_number: "Show week number",
+    ed_highlight_weekend: "Highlight weekend",
     ed_show_end_time: "Show end time",
     ed_event_progress: "Progress bar",
     ed_progress_off: "None",
     ed_progress_line: "Line",
     ed_multi_day_events: "Show multi-day events on every day",
     ed_month_view: "Monthly calendar view (grid)",
+    ed_sort_mode: "Sorting",
+    ed_sort_chronological: "By time",
+    ed_sort_grouped: "By calendar",
     day_no_events: "No events or tasks",
     month_pick: "Go to month",
     month_label: "Month",
@@ -1811,6 +1834,8 @@ const I18N = {
     ed_interactions: "Interaktionen",
     ed_title: "Titel",
     ed_days_to_show: "Tage anzeigen",
+    ed_start_days_ahead: "Beginn in (Tagen)",
+    ed_start_days_ahead_help: "Verschiebt den Beginn der Agenda: 0 (oder leer) = ab heute, 1 = ab morgen, 7 = in einer Woche. Überfällige und erledigte Aufgaben sind nicht betroffen.",
     ed_max_events_visible: "Max Ereignisse",
     ed_show_title: "Titel anzeigen",
     ed_show_current_date: "Aktuelles Datum anzeigen",
@@ -1842,12 +1867,16 @@ const I18N = {
     ed_limit_events: "Ereignisanzeige begrenzen (Scrollbar)",
     ed_compact_mode: "Kompaktmodus (kleinere Abstände)",
     ed_show_week_number: "Zeige Kalenderwoche",
+    ed_highlight_weekend: "Wochenende hervorheben",
     ed_show_end_time: "Zeige Endzeit",
     ed_event_progress: "Fortschrittsbalken",
     ed_progress_off: "Keine",
     ed_progress_line: "Linie",
     ed_multi_day_events: "Mehrtägige Ereignisse an allen Tagen zeigen",
     ed_month_view: "Monatskalender-Ansicht (Raster)",
+    ed_sort_mode: "Sortierung",
+    ed_sort_chronological: "Nach Uhrzeit",
+    ed_sort_grouped: "Nach Kalender",
     day_no_events: "Keine Ereignisse oder Aufgaben",
     month_pick: "Zum Monat gehen",
     month_label: "Monat",
@@ -1973,6 +2002,8 @@ const I18N = {
     ed_interactions: "Interactions",
     ed_title: "Titre",
     ed_days_to_show: "Jours à afficher",
+    ed_start_days_ahead: "Commencer dans (jours)",
+    ed_start_days_ahead_help: "Décale le début de l'agenda : 0 (ou vide) = à partir d'aujourd'hui, 1 = demain, 7 = dans une semaine. Les retards et terminés ne sont pas affectés.",
     ed_max_events_visible: "Nombre max d'événements visibles",
     ed_show_title: "Afficher le titre",
     ed_show_current_date: "Afficher la date du jour",
@@ -2004,12 +2035,16 @@ const I18N = {
     ed_limit_events: "Limiter les événements visibles (barre de défilement)",
     ed_compact_mode: "Mode compact (espacement réduit)",
     ed_show_week_number: "Afficher le numéro de semaine",
+    ed_highlight_weekend: "Mettre en évidence le week-end",
     ed_show_end_time: "Afficher l'heure de fin",
     ed_event_progress: "Barre de progression",
     ed_progress_off: "Aucune",
     ed_progress_line: "Ligne",
     ed_multi_day_events: "Afficher les événements multi-jours chaque jour",
     ed_month_view: "Vue calendrier mensuel (grille)",
+    ed_sort_mode: "Tri",
+    ed_sort_chronological: "Par heure",
+    ed_sort_grouped: "Par calendrier",
     day_no_events: "Aucun événement ou tâche",
     month_pick: "Aller au mois",
     month_label: "Mois",
@@ -2685,7 +2720,21 @@ class CalendarTasksCard extends HTMLElement {
       end = new Date(start);
       end.setDate(start.getDate() + 42);
     } else {
-      end.setDate(end.getDate() + (this._config.days || 7));
+      // start resta a oggi (così scaduti/completati hanno i loro dati); end
+      // copre l'intera finestra visibile: offset di partenza + giorni mostrati.
+      const ahead = Math.max(0, parseInt(this._config.start_days_ahead) || 0);
+      if (this._config.show_empty_days) {
+        // Con i giorni vuoti visibili la finestra è esattamente days giorni.
+        end.setDate(end.getDate() + ahead + (this._config.days || 7));
+      } else {
+        // Con i giorni vuoti nascosti, `days` conta i giorni CON eventi: la
+        // card scorre avanti finché ne trova abbastanza. Serve quindi una
+        // finestra dati più ampia (fino a 6 mesi) per non perdere eventi
+        // sparsi a mesi di distanza. Il rendering si ferma comunque a `days`
+        // giorni pieni.
+        end.setDate(end.getDate() + ahead);
+        end.setMonth(end.getMonth() + 6);
+      }
     }
     const [events, tasks, weatherForecast] = await Promise.all([
       this._fetchCalendarEvents(start, end),
@@ -3359,58 +3408,85 @@ class CalendarTasksCard extends HTMLElement {
         return row;
       };
 
+      // Ordinamento: "chronological" mescola eventi e task per orario (all-day
+      // in cima, senza orario in fondo); "grouped" tiene prima tutti gli eventi
+      // e poi tutti i task (comportamento storico).
+      const popupGrouped = this._config.sort_mode === "grouped";
+      const popupItems = [];
       for (const ev of events) {
-        const color = getEntityColor(ev._source, this._config);
         const allDay = !ev.start.dateTime;
-        // Posizione dell'evento nel suo intervallo multi-giorno (per le frecce)
         const pos = getEventDayPosition(ev, date);
         const dayIndex = pos.dayIndex || 1;
-        const totalDays = pos.totalDays || 1;
-        let timeStr = "";
-        if (allDay) {
-          timeStr = t("all_day", lang);
-        } else if (totalDays > 1) {
-          // Multi-giorno con ora: primo "10:00 →", ultimo "→ 12:00", intermedi "tutto il giorno".
-          const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
-          const eAlways = fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale);
-          if (dayIndex === 1) timeStr = `${s} →`;
-          else if (dayIndex === totalDays) timeStr = `→ ${eAlways}`;
-          else timeStr = t("all_day", lang);
-        } else {
-          // Orario di fine solo se il toggle show_end_time è attivo (come in agenda)
-          const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
-          const e = (this._config.show_end_time && ev.end?.dateTime)
-            ? fmtTimeFormatted(ev.end.dateTime, timeFormat, displayLocale) : null;
-          timeStr = e ? `${s}–${e}` : s;
+        let rank, sortMs;
+        if (allDay) { rank = 0; sortMs = 0; }
+        else {
+          rank = 1;
+          sortMs = (dayIndex === 1 && ev.start?.dateTime)
+            ? new Date(ev.start.dateTime).getTime() : date.getTime();
         }
-        // Location e descrizione seguono i rispettivi toggle, come in agenda
-        const locText = (this._config.show_location && ev.location) ? formatLocation(ev.location) : "";
-        const descText = this._config.show_description ? sanitizeDescription(ev.description) : "";
-        // Location cliccabile → link Google Maps (se toggle attivo)
-        const mapsUrl = (locText && this._config.location_clickable) ? buildMapsUrl(locText) : "";
-        // Tempo relativo (se toggle attivo)
-        let relText = "";
-        if (this._config.show_relative_time) {
-          const evDate = parseEventDate(ev.start.dateTime || ev.start.date);
-          relText = formatRelativeTime(evDate, undefined, lang);
-        }
-        list.appendChild(mkRow(color, ev.summary || "—", timeStr, locText, descText, mapsUrl, relText));
+        popupItems.push({ type: "event", rank, sortMs, data: ev, pos });
       }
       for (const tk of tasks) {
-        const color = getEntityColor(tk._source, this._config);
-        const descText = this._config.show_description ? sanitizeDescription(tk.description) : "";
-        // Se la scadenza ha un orario (non è mezzanotte), lo mostro
         const due = parseDueDate(tk.due);
-        let timeStr = "";
-        if (due && (due.getHours() !== 0 || due.getMinutes() !== 0)) {
-          timeStr = fmtTimeFormatted(due.toISOString(), timeFormat, displayLocale);
+        const hasTime = due && (due.getHours() !== 0 || due.getMinutes() !== 0);
+        popupItems.push({
+          type: "task",
+          // grouped: tutti i task dopo gli eventi (rank alto). chronological:
+          // con orario tra gli item (rank 1), senza orario in fondo (rank 2).
+          rank: popupGrouped ? 3 : (hasTime ? 1 : 2),
+          sortMs: hasTime ? due.getTime() : Infinity,
+          data: tk,
+        });
+      }
+      popupItems.sort((a, b) => (a.rank - b.rank) || (a.sortMs - b.sortMs));
+
+      for (const item of popupItems) {
+        if (item.type === "event") {
+          const ev = item.data;
+          const color = getEntityColor(ev._source, this._config);
+          const allDay = !ev.start.dateTime;
+          const pos = item.pos;
+          const dayIndex = pos.dayIndex || 1;
+          const totalDays = pos.totalDays || 1;
+          let timeStr = "";
+          if (allDay) {
+            timeStr = t("all_day", lang);
+          } else if (totalDays > 1) {
+            const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
+            const eAlways = fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale);
+            if (dayIndex === 1) timeStr = `${s} →`;
+            else if (dayIndex === totalDays) timeStr = `→ ${eAlways}`;
+            else timeStr = t("all_day", lang);
+          } else {
+            const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
+            const e = (this._config.show_end_time && ev.end?.dateTime)
+              ? fmtTimeFormatted(ev.end.dateTime, timeFormat, displayLocale) : null;
+            timeStr = e ? `${s}–${e}` : s;
+          }
+          const locText = (this._config.show_location && ev.location) ? formatLocation(ev.location) : "";
+          const descText = this._config.show_description ? sanitizeDescription(ev.description) : "";
+          const mapsUrl = (locText && this._config.location_clickable) ? buildMapsUrl(locText) : "";
+          let relText = "";
+          if (this._config.show_relative_time) {
+            const evDate = parseEventDate(ev.start.dateTime || ev.start.date);
+            relText = formatRelativeTime(evDate, undefined, lang);
+          }
+          list.appendChild(mkRow(color, ev.summary || "—", timeStr, locText, descText, mapsUrl, relText));
+        } else {
+          const tk = item.data;
+          const color = getEntityColor(tk._source, this._config);
+          const descText = this._config.show_description ? sanitizeDescription(tk.description) : "";
+          const due = parseDueDate(tk.due);
+          let timeStr = "";
+          if (due && (due.getHours() !== 0 || due.getMinutes() !== 0)) {
+            timeStr = fmtTimeFormatted(due.toISOString(), timeFormat, displayLocale);
+          }
+          let relText = "";
+          if (this._config.show_relative_time && due) {
+            relText = formatRelativeTime(due, undefined, lang);
+          }
+          list.appendChild(mkRow(color, tk.summary || tk.uid || "—", timeStr, "", descText, "", relText));
         }
-        // Tempo relativo del task (se toggle attivo e ha una scadenza)
-        let relText = "";
-        if (this._config.show_relative_time && due) {
-          relText = formatRelativeTime(due, undefined, lang);
-        }
-        list.appendChild(mkRow(color, tk.summary || tk.uid || "—", timeStr, "", descText, "", relText));
       }
     }
     panel.appendChild(list);
@@ -4068,9 +4144,20 @@ class CalendarTasksCard extends HTMLElement {
     // min/max della giornata e umidità (se disponibili negli attributi).
 
     // ── Ciclo per giorno: eventi + task ATTIVI con data ──
-    for (let i = 0; i < numDays; i++) {
+    // start_days_ahead sposta il giorno di partenza (0 = oggi, 1 = domani, ...).
+    // Se i giorni vuoti sono VISIBILI: si mostrano esattamente numDays giorni di
+    // calendario. Se sono NASCOSTI: `days` conta i giorni CON eventi, quindi si
+    // scandiscono i giorni avanti (fino a un tetto di ~6 mesi) finché non se ne
+    // sono MOSTRATI numDays pieni — così eventi sparsi a mesi di distanza non
+    // vengono persi.
+    const startAhead = Math.max(0, parseInt(this._config.start_days_ahead) || 0);
+    const showEmpty = this._config.show_empty_days;
+    const maxScan = showEmpty ? numDays : 185; // tetto ~6 mesi quando si contano i pieni
+    let shownDays = 0;
+    for (let i = 0; i < maxScan; i++) {
+      if (!showEmpty && shownDays >= numDays) break; // raggiunti i giorni pieni richiesti
       const date = new Date();
-      date.setDate(date.getDate() + i);
+      date.setDate(date.getDate() + i + startAhead);
       date.setHours(0, 0, 0, 0);
       const dk = dayKey(date);
       // Eventi del giorno. Se `multi_day_events` è attivo (default), un evento
@@ -4101,6 +4188,7 @@ class CalendarTasksCard extends HTMLElement {
       const totalItems = dayEvents.length + dayTasks.length;
       if (totalItems === 0 && !this._config.show_empty_days) continue;
       hasContent = true;
+      shownDays++; // conta i giorni effettivamente mostrati (per il limite dei pieni)
       const isToday = dk === todayKey;
       const wdRaw = getShortDayName(date, displayLocale);
       const wdName = wdRaw.charAt(0).toUpperCase() + wdRaw.slice(1).toLowerCase();
@@ -4115,14 +4203,10 @@ class CalendarTasksCard extends HTMLElement {
         }
       }
       // Raggruppa eventi per calendario di origine: una barra unica per gruppo
-      const eventGroups = new Map();
-      dayEvents.forEach(ev => {
-        if (!eventGroups.has(ev._source)) eventGroups.set(ev._source, []);
-        eventGroups.get(ev._source).push(ev);
-      });
-      const eventsHtml = [...eventGroups.entries()].map(([sourceId, group]) => {
-        const groupColor = getEntityColor(sourceId, this._config);
-        const rowsHtml = group.map(ev => {
+      // Genera l'HTML di una singola riga evento (usata sia nel raggruppamento
+      // per fonte che nell'ordinamento cronologico). groupColor serve solo alla
+      // barra di avanzamento.
+      const renderEventRow = (ev, groupColor) => {
           const allDay = isAllDay(ev);
           // Posizione dell'evento nel suo intervallo multi-giorno (impostata dal filtro).
           // dayIndex 1 = giorno di inizio, > 1 = prosecuzione dell'evento.
@@ -4133,11 +4217,6 @@ class CalendarTasksCard extends HTMLElement {
           const s = fmtTimeFormatted(ev.start.dateTime, timeFormat, displayLocale);
           const e = this._config.show_end_time ? fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale) : null;
           const eAlways = fmtTimeFormatted(ev.end?.dateTime, timeFormat, displayLocale);
-          // Orario per gli eventi multi-giorno con ora:
-          //  - primo giorno  → "10:00 →"  (parte da qui)
-          //  - ultimo giorno → "→ 12:00"  (arriva fin qui, ora di FINE)
-          //  - giorni intermedi → "tutto il giorno"
-          // La freccia distingue inizio da fine, così l'utente non confonde i due.
           let timeStr;
           if (allDay) {
             timeStr = t("all_day", lang);
@@ -4148,15 +4227,11 @@ class CalendarTasksCard extends HTMLElement {
           } else {
             timeStr = e ? `${s}–${e}` : s;
           }
-          // Contatore "(2/6)" accanto al titolo, come fanno Google e Apple Calendar
           const dayCounter = totalDays > 1
             ? `<span class="ctc-day-counter">(${dayIndex}/${totalDays})</span>` : "";
           const sub = this._config.show_source !== false ? `<div class="ctc-event-sub">${ev._source.replace("calendar.", "")}</div>` : "";
           const descClean = this._config.show_description ? sanitizeDescription(ev.description) : "";
           const desc = descClean ? `<div class="ctc-event-desc">${descClean}</div>` : "";
-          // Location (solo se toggle attivo e l'evento ha una location): mostra icona pin + testo
-          // Se location_clickable è true, racchiudo in <a> che apre Google Maps in nuova tab.
-          // CalDAV iCloud spesso restituisce multi-riga ("Rho\nMI, Italia"), normalizzo con formatLocation.
           let loc = "";
           if (this._config.show_location && ev.location) {
             const locText = formatLocation(ev.location);
@@ -4171,20 +4246,11 @@ class CalendarTasksCard extends HTMLElement {
               }
             }
           }
-          // Barra di avanzamento (event_progress: line) per eventi con orario
-          // in corso adesso. data-start/data-end permettono al timer di
-          // aggiornare la larghezza senza ridisegnare la card.
           let progress = "";
           if (this._config.event_progress === "line" && !allDay && ev.start.dateTime && ev.end?.dateTime) {
             const startDate = new Date(ev.start.dateTime);
             const endDate = new Date(ev.end.dateTime);
             const isMultiDay = (ev._ctcTotalDays || 1) > 1;
-            // La barra appare per:
-            //  - eventi in giornata singola in corso;
-            //  - eventi multi-giorno: SOLO sul pezzo del giorno corrente (oggi),
-            //    con percentuale calcolata sull'INTERO evento (start/end reali),
-            //    così al giorno 3 di 5 la barra è ~50% e capisci a vista quanto
-            //    manca. I giorni successivi mostrano invece il countdown testuale.
             const showBar = !isMultiDay || isToday;
             if (showBar) {
               const startMs = startDate.getTime();
@@ -4196,10 +4262,6 @@ class CalendarTasksCard extends HTMLElement {
               }
             }
           }
-          // Countdown testuale ("Oggi", "Mancano X giorni") — SOLO se non c'è la
-          // barra. Barra e countdown sono mutuamente esclusivi (come
-          // calendar-card-pro): l'evento in corso mostra la barra, quello
-          // futuro il countdown, mai entrambi sullo stesso evento.
           let rel = "";
           if (!progress && this._config.show_relative_time && !isContinuation) {
             const evDate = parseEventDate(ev.start.dateTime || ev.start.date);
@@ -4207,21 +4269,89 @@ class CalendarTasksCard extends HTMLElement {
             if (relText) rel = `<div class="ctc-event-relative">${relText}</div>`;
           }
           return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}${dayCounter}</div>${desc}${loc}${rel}${sub}${progress}</div><div class="ctc-event-time">${timeStr}</div></div>`;
-        }).join("");
-        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
-      }).join("");
+      };
 
-      // Task attivi del giorno, raggruppati per lista di origine
-      const taskGroups = new Map();
-      dayTasks.forEach(task => {
-        if (!taskGroups.has(task._source)) taskGroups.set(task._source, []);
-        taskGroups.get(task._source).push(task);
+      let eventsHtml, tasksHtml;
+      if (this._config.sort_mode === "grouped") {
+        // ── Modalità "grouped": raggruppati per calendario/lista (comportamento
+        // storico). Prima tutti gli eventi raggruppati per fonte, poi tutti i
+        // task raggruppati per fonte. ──
+        const eventGroups = new Map();
+        dayEvents.forEach(ev => {
+          if (!eventGroups.has(ev._source)) eventGroups.set(ev._source, []);
+          eventGroups.get(ev._source).push(ev);
+        });
+        eventsHtml = [...eventGroups.entries()].map(([sourceId, group]) => {
+          const groupColor = getEntityColor(sourceId, this._config);
+          const rowsHtml = group.map(ev => renderEventRow(ev, groupColor)).join("");
+          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+        }).join("");
+        const taskGroups = new Map();
+        dayTasks.forEach(task => {
+          if (!taskGroups.has(task._source)) taskGroups.set(task._source, []);
+          taskGroups.get(task._source).push(task);
+        });
+        tasksHtml = [...taskGroups.entries()].map(([sourceId, items]) => {
+          const groupColor = getEntityColor(sourceId, this._config);
+          const rowsHtml = items.map(t => renderTaskRow(t, false)).join("");
+          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+        }).join("");
+      } else {
+      // ── Ordinamento cronologico: eventi e task del giorno mescolati per orario ──
+      // Ordine: 1) eventi all-day in cima, 2) eventi/task con orario per ora
+      // crescente, 3) task senza orario in fondo. Poi si raggruppano in
+      // segmenti CONSECUTIVI della stessa fonte, ognuno con una barra colorata
+      // unica (così due item adiacenti dello stesso calendario condividono la
+      // barra, ma se in mezzo cambia colore la barra si spezza).
+      const dayItems = [];
+      // rank: 0 = all-day (in cima), 1 = con orario, 2 = senza orario (in fondo)
+      dayEvents.forEach(ev => {
+        const allDay = isAllDay(ev);
+        let sortMs, rank;
+        if (allDay) {
+          rank = 0; sortMs = 0;
+        } else {
+          rank = 1;
+          // Per multi-giorno usa l'orario del pezzo del giorno corrente:
+          // sul primo giorno l'inizio, sui giorni successivi l'inizio giornata.
+          const dayIndex = ev._ctcDayIndex || 1;
+          sortMs = (dayIndex === 1 && ev.start?.dateTime)
+            ? new Date(ev.start.dateTime).getTime()
+            : date.getTime(); // inizio del giorno per le prosecuzioni
+        }
+        dayItems.push({ type: "event", source: ev._source, rank, sortMs, data: ev });
       });
-      const tasksHtml = [...taskGroups.entries()].map(([sourceId, items]) => {
-        const groupColor = getEntityColor(sourceId, this._config);
-        const rowsHtml = items.map(t => renderTaskRow(t, false)).join("");
+      dayTasks.forEach(task => {
+        const parsed = parseDueDate(task.due);
+        const hasTime = parsed && (parsed.getHours() !== 0 || parsed.getMinutes() !== 0);
+        dayItems.push({
+          type: "task",
+          source: task._source,
+          rank: hasTime ? 1 : 2,           // con orario tra gli item, senza orario in fondo
+          sortMs: hasTime ? parsed.getTime() : Infinity,
+          data: task,
+        });
+      });
+      // Ordina per rank, poi per orario. stable per non stravolgere pari-orario.
+      dayItems.sort((a, b) => (a.rank - b.rank) || (a.sortMs - b.sortMs));
+
+      // Raggruppa in segmenti consecutivi della stessa fonte
+      const segments = [];
+      dayItems.forEach(item => {
+        const last = segments[segments.length - 1];
+        if (last && last.source === item.source) last.items.push(item);
+        else segments.push({ source: item.source, items: [item] });
+      });
+      eventsHtml = segments.map(seg => {
+        const groupColor = getEntityColor(seg.source, this._config);
+        const rowsHtml = seg.items.map(it =>
+          it.type === "event" ? renderEventRow(it.data, groupColor) : renderTaskRow(it.data, false)
+        ).join("");
         return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
+      tasksHtml = ""; // task ora inclusi in eventsHtml (ordinamento unificato)
+      }
+
 
       const emptyHtml = totalItems === 0 ? `<div class="ctc-empty-day">${t("no_events_day", lang)}</div>` : "";
 
@@ -4257,8 +4387,12 @@ class CalendarTasksCard extends HTMLElement {
         }
       }
 
+      // Weekend: sabato (6) o domenica (0) → classe per lo stile dedicato,
+      // solo se l'opzione highlight_weekend è attiva (default on).
+      const wd = date.getDay();
+      const isWeekend = this._config.highlight_weekend !== false && (wd === 0 || wd === 6);
       card.innerHTML += `
-        <div class="ctc-day-row">
+        <div class="ctc-day-row${isWeekend ? " weekend" : ""}">
           <div class="ctc-date-col">
             <div class="ctc-date-wd">${wdName}</div>
             <div class="ctc-date-num ${isToday ? "today" : ""}">${date.getDate()}</div>
@@ -4990,10 +5124,12 @@ class CalendarTasksCardEditor extends HTMLElement {
 
       const lyLabels = {
         month_view: t("ed_month_view", lang),
+        sort_mode: t("ed_sort_mode", lang),
         days: t("ed_days_to_show", lang),
         limit_events_visible: t("ed_limit_events", lang),
         max_events_visible: t("ed_max_events_visible", lang),
         show_week_number: t("ed_show_week_number", lang),
+        highlight_weekend: t("ed_highlight_weekend", lang),
         show_empty_days: t("ed_show_empty_days", lang),
         compact_mode: t("ed_compact_mode", lang),
       };
@@ -5004,14 +5140,20 @@ class CalendarTasksCardEditor extends HTMLElement {
         const limitOn = c.limit_events_visible === true;
         const data = {
           month_view: c.month_view === true,
+          sort_mode: c.sort_mode || "chronological",
           days: c.days != null ? c.days : 7,
           limit_events_visible: limitOn,
           show_week_number: c.show_week_number === true,
+          highlight_weekend: c.highlight_weekend !== false,
           show_empty_days: c.show_empty_days === true,
           compact_mode: c.compact_mode === true,
         };
         const schema = [
           { name: "month_view", selector: { boolean: {} } },
+          { name: "sort_mode", selector: { select: { mode: "dropdown", options: [
+            { value: "chronological", label: t("ed_sort_chronological", lang) },
+            { value: "grouped", label: t("ed_sort_grouped", lang) },
+          ] } } },
           { name: "days", selector: { number: { min: 1, max: 30, mode: "box" } } },
           { name: "limit_events_visible", selector: { boolean: {} } },
         ];
@@ -5021,6 +5163,7 @@ class CalendarTasksCardEditor extends HTMLElement {
         }
         schema.push(
           { name: "show_week_number", selector: { boolean: {} } },
+          { name: "highlight_weekend", selector: { boolean: {} } },
           { name: "show_empty_days", selector: { boolean: {} } },
           { name: "compact_mode", selector: { boolean: {} } },
         );
@@ -5033,12 +5176,14 @@ class CalendarTasksCardEditor extends HTMLElement {
         const v = e.detail.value || {};
         const wasLimit = this._config.limit_events_visible === true;
         this._config.month_view = v.month_view;
+        this._config.sort_mode = v.sort_mode || "chronological";
         this._config.days = v.days != null ? v.days : 7;
         this._config.limit_events_visible = v.limit_events_visible;
         if (v.max_events_visible != null) {
           this._config.max_events_visible = v.max_events_visible < 1 ? 1 : v.max_events_visible;
         }
         this._config.show_week_number = v.show_week_number;
+        this._config.highlight_weekend = v.highlight_weekend;
         this._config.show_empty_days = v.show_empty_days;
         this._config.compact_mode = v.compact_mode;
         this._fire();
@@ -5398,6 +5543,27 @@ class CalendarTasksCardEditor extends HTMLElement {
     // ── Filters ──
     {
       const { wrapper, body } = this._makeCollapsible("filters", t("ed_filters", lang), false, "mdi:filter-variant");
+
+      // "Inizia tra (giorni)" — offset del giorno di partenza dell'agenda.
+      const sdaForm = document.createElement("ha-form");
+      sdaForm.hass = this._hass;
+      sdaForm.data = { start_days_ahead: this._config.start_days_ahead != null ? this._config.start_days_ahead : 0 };
+      sdaForm.schema = [{ name: "start_days_ahead", selector: { number: { min: 0, max: 60, mode: "box" } } }];
+      sdaForm.computeLabel = () => t("ed_start_days_ahead", lang);
+      sdaForm.addEventListener("value-changed", (e) => {
+        const val = (e.detail.value || {}).start_days_ahead;
+        // Campo vuoto (null/undefined) o negativo → 0 (vista da oggi).
+        this._config.start_days_ahead = (val == null || val < 0) ? 0 : val;
+        this._fire();
+      });
+      body.appendChild(sdaForm);
+      const sdaHelp = document.createElement("div");
+      sdaHelp.style.cssText = "font-size:12px;color:var(--secondary-text-color);margin-top:6px;line-height:1.4;";
+      sdaHelp.textContent = t("ed_start_days_ahead_help", lang);
+      body.appendChild(sdaHelp);
+      const sdaSep = document.createElement("div");
+      sdaSep.style.cssText = "height:1px;background:var(--divider-color, rgba(127,127,127,0.2));margin:16px 0;";
+      body.appendChild(sdaSep);
 
       // Toggle "Nascondi duplicati" in cima alla sezione (ha-form nativo).
       const dupForm = document.createElement("ha-form");
