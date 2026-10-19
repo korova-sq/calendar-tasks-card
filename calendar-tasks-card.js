@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.12.0
+ * calendar-tasks-card v1.12.1
  */
 
-const CARD_VERSION = "1.12.0";
+const CARD_VERSION = "1.12.1";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -4080,7 +4080,7 @@ class CalendarTasksCard extends HTMLElement {
       const checkbox = this._config.allow_complete !== false
         ? `<div class="ctc-task-checkbox ${done ? "checked" : ""}" data-action="toggle-complete" data-entity-id="${task._source}" data-uid="${escAttr(task.uid)}" data-summary="${escAttr(taskSummary)}" data-current-status="${done ? "completed" : "needs_action"}"></div>`
         : "";
-      return `<div class="ctc-event-row ctc-item" data-entity-id="${task._source}">${checkbox}<div class="ctc-event-main"><div class="ctc-event-title ${done ? "done" : ""}">${taskSummary}</div>${desc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
+      return `<div class="ctc-event-row ctc-item" data-entity-id="${task._source}">${checkbox}<div class="ctc-event-main"><div class="ctc-event-title ${done ? "done" : ""}">${escapeHtmlAttribute(taskSummary)}</div>${desc}${rel}${sub}</div><div class="ctc-event-time">${timeStr}</div></div>`;
     };
 
     // Classifica i task:
@@ -4268,7 +4268,7 @@ class CalendarTasksCard extends HTMLElement {
             const relText = formatRelativeTime(evDate, undefined, lang);
             if (relText) rel = `<div class="ctc-event-relative">${relText}</div>`;
           }
-          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${ev.summary || "Evento"}${dayCounter}</div>${desc}${loc}${rel}${sub}${progress}</div><div class="ctc-event-time">${timeStr}</div></div>`;
+          return `<div class="ctc-event-row ctc-item" data-entity-id="${ev._source}"><div class="ctc-event-main"><div class="ctc-event-title">${escapeHtmlAttribute(ev.summary) || "Evento"}${dayCounter}</div>${desc}${loc}${rel}${sub}${progress}</div><div class="ctc-event-time">${timeStr}</div></div>`;
       };
 
       let eventsHtml, tasksHtml;

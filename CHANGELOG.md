@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.1] - 2026-10-19
+
+### Security
+- **XSS fix** — event and task titles are now escaped (`escapeHtmlAttribute`) before being inserted into the card's HTML. Previously, a malicious title from a shared calendar, ICS subscription or shared task list could inject arbitrary markup into the dashboard. Descriptions, locations and attributes were already escaped. Reported by @frenck during the HACS default-store review.
+
+[1.12.1]: https://github.com/korova-sq/calendar-tasks-card/compare/v1.12.0...v1.12.1
+
+
 ## [1.12.0] - 2026-09-30
 
 ### Added
