@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.12.1
+ * calendar-tasks-card v1.12.2
  */
 
-const CARD_VERSION = "1.12.1";
+const CARD_VERSION = "1.12.2";
 
 /* Palette di 12 colori predefiniti per le entità.
    Scelti per essere distinguibili tra loro e leggibili sia in tema chiaro che scuro.
@@ -1261,7 +1261,7 @@ const WEATHER_LABELS = {
 function getWeatherLabel(condition, lang) {
   if (!condition) return "";
   const dict = WEATHER_LABELS[lang] || WEATHER_LABELS.en;
-  return dict[String(condition).toLowerCase()] || condition;
+  return dict[String(condition).toLowerCase()] || escapeHtmlAttribute(condition);
 }
 
 /* Estrae la previsione meteo per uno specifico giorno da un array di forecast.
@@ -3935,7 +3935,7 @@ class CalendarTasksCard extends HTMLElement {
     const headerHtml = hasHeader ? `
       <div class="ctc-header">
         <span class="ctc-title-wrap">
-          ${this._config.show_title !== false ? `<span class="ctc-title">${titleText}</span>` : ""}
+          ${this._config.show_title !== false ? `<span class="ctc-title">${escapeHtmlAttribute(titleText)}</span>` : ""}
           ${currentDateHtml}
         </span>
         ${headerActions ? `<span class="ctc-header-actions">${headerActions}</span>` : ""}
@@ -3996,7 +3996,7 @@ class CalendarTasksCard extends HTMLElement {
       const label = getWeatherLabel(condition, lang);
       const attrs = weatherEntity.attributes || {};
       const temp = attrs.temperature;
-      const unit = attrs.temperature_unit || "°";
+      const unit = escapeHtmlAttribute(attrs.temperature_unit) || "°";
       const humidity = attrs.humidity;
       // Cerca min/max nella forecast del giorno corrente
       const todayFc = getForecastForDay(this._weatherForecast, today);
@@ -4258,7 +4258,7 @@ class CalendarTasksCard extends HTMLElement {
               const p = getEventProgress(startMs, endMs);
               if (p != null) {
                 const pct = Math.round(p * 100);
-                progress = `<div class="ctc-progress-line ctc-progress" data-start="${startMs}" data-end="${endMs}"><div class="ctc-progress-fill" style="width:${pct}%;background:${groupColor}"></div></div>`;
+                progress = `<div class="ctc-progress-line ctc-progress" data-start="${startMs}" data-end="${endMs}"><div class="ctc-progress-fill" style="width:${pct}%;background:${escapeHtmlAttribute(groupColor)}"></div></div>`;
               }
             }
           }
@@ -4284,7 +4284,7 @@ class CalendarTasksCard extends HTMLElement {
         eventsHtml = [...eventGroups.entries()].map(([sourceId, group]) => {
           const groupColor = getEntityColor(sourceId, this._config);
           const rowsHtml = group.map(ev => renderEventRow(ev, groupColor)).join("");
-          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${escapeHtmlAttribute(groupColor)}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
         }).join("");
         const taskGroups = new Map();
         dayTasks.forEach(task => {
@@ -4294,7 +4294,7 @@ class CalendarTasksCard extends HTMLElement {
         tasksHtml = [...taskGroups.entries()].map(([sourceId, items]) => {
           const groupColor = getEntityColor(sourceId, this._config);
           const rowsHtml = items.map(t => renderTaskRow(t, false)).join("");
-          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${escapeHtmlAttribute(groupColor)}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
         }).join("");
       } else {
       // ── Ordinamento cronologico: eventi e task del giorno mescolati per orario ──
@@ -4347,7 +4347,7 @@ class CalendarTasksCard extends HTMLElement {
         const rowsHtml = seg.items.map(it =>
           it.type === "event" ? renderEventRow(it.data, groupColor) : renderTaskRow(it.data, false)
         ).join("");
-        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${escapeHtmlAttribute(groupColor)}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
       tasksHtml = ""; // task ora inclusi in eventsHtml (ordinamento unificato)
       }
@@ -4364,7 +4364,7 @@ class CalendarTasksCard extends HTMLElement {
         // Per i giorni futuri, cerco nella forecast
         let condition = null;
         let temp = null;
-        let unit = weatherEntity.attributes?.temperature_unit || "°";
+        let unit = escapeHtmlAttribute(weatherEntity.attributes?.temperature_unit) || "°";
         if (isToday) {
           condition = weatherEntity.state;
           temp = weatherEntity.attributes?.temperature;
@@ -4418,7 +4418,7 @@ class CalendarTasksCard extends HTMLElement {
       const groupsHtml = [...undatedGroups.entries()].map(([sourceId, items]) => {
         const groupColor = getEntityColor(sourceId, this._config);
         const rowsHtml = items.map(t => renderTaskRow(t, false)).join("");
-        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${escapeHtmlAttribute(groupColor)}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
       card.innerHTML += `
         <div class="ctc-section">
@@ -4442,7 +4442,7 @@ class CalendarTasksCard extends HTMLElement {
       const groupsHtml = [...overdueGroups.entries()].map(([sourceId, items]) => {
         const groupColor = getEntityColor(sourceId, this._config);
         const rowsHtml = items.map(t => renderTaskRow(t, false)).join("");
-        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+        return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${escapeHtmlAttribute(groupColor)}"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
       }).join("");
       // Layout come una riga-giorno: colonna sinistra con icona + etichetta
       // "scaduti" (al posto di data), gruppi task a destra. Così è allineato
@@ -4506,7 +4506,7 @@ class CalendarTasksCard extends HTMLElement {
         const groupsHtml = [...completedGroups.entries()].map(([sourceId, items]) => {
           const groupColor = getEntityColor(sourceId, this._config);
           const rowsHtml = items.map(t => renderTaskRow(t, true)).join("");
-          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${groupColor};opacity:0.4"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
+          return `<div class="ctc-event-group"><div class="ctc-bar" style="background:${escapeHtmlAttribute(groupColor)};opacity:0.4"></div><div class="ctc-event-group-items">${rowsHtml}</div></div>`;
         }).join("");
         // Layout come una riga-giorno: "COMPLETATI" (grigio tenue) nella colonna
         // sinistra al posto della data, gruppi task a destra. Allineato alla

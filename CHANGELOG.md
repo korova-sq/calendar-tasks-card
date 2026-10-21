@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.2] - 2026-10-21
+### Security
+- Escape weather condition label (`getWeatherLabel` fallback) before innerHTML insertion
+- Escape `temperature_unit` attribute in both today widget and per-day weather
+- Escape card title (`titleText`) before innerHTML insertion
+- Escape entity colors (`groupColor`) in all 7 `style="background:..."` occurrences via `escapeHtmlAttribute()
+
 ## [1.12.1] - 2026-10-19
 
 ### Security
