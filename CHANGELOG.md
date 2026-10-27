@@ -5,12 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.12.2] - 2026-10-21
-### Security
-- Escape weather condition label (`getWeatherLabel` fallback) before innerHTML insertion
-- Escape `temperature_unit` attribute in both today widget and per-day weather
-- Escape card title (`titleText`) before innerHTML insertion
-- Escape entity colors (`groupColor`) in all 7 `style="background:..."` occurrences via `escapeHtmlAttribute()
+## [1.13.0] - 27-10-2026
+
+### Added
+- **Progress bar mode** — `event_progress` now supports `bar` in addition to `line`: a full-width progress bar filled in the calendar's colour, showing how far along a currently running event is.
+- **Polish translation** (`pl`) — full card and editor translation, consistent with sun-weather-card (weather labels originally contributed by @EasYPLL).
+- **Swedish translation** (`sv`) — full card and editor translation, consistent with sun-weather-card.
+- **HACS default store** — the card is now available in the default HACS store (no more custom repository needed).
+
+### Fixed
+- **"No Date" section alignment** — the section now uses the same day-row grid layout as "Overdue" and "Completed", so the coloured bar aligns with the rest of the card.
+
+[1.13.0]: https://github.com/korova-sq/calendar-tasks-card/compare/v1.12.2...v1.13.0
+
+
+## [1.12.2] - 23-10-2026
+
+### Fixed
+- Removed a stale `if (!this._rendered)` guard that could skip the first render under certain timing conditions.
+
+### Maintenance
+- Removed ~30 lines of redundant CSS left over from earlier refactors.
+
+[1.12.2]: https://github.com/korova-sq/calendar-tasks-card/compare/v1.12.1...v1.12.2
+
 
 ## [1.12.1] - 2026-10-19
 

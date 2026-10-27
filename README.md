@@ -2,7 +2,7 @@
 
 <br>
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/korova-sq/calendar-tasks-card)](https://github.com/korova-sq/calendar-tasks-card/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/korova-sq/calendar-tasks-card?style=flat)](https://github.com/korova-sq/calendar-tasks-card/stargazers)
 [![Downloads](https://img.shields.io/github/downloads/korova-sq/calendar-tasks-card/total?style=flat)](https://github.com/korova-sq/calendar-tasks-card/releases)
@@ -48,7 +48,7 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 - ➕ **Add event/task**: inline form to create calendar events and todo tasks without leaving the card
 - 🔍 **Filters**: hide events/tasks by keyword (`exclude`), show only matching ones (`include`), or hide duplicates across calendars
 - 🔄 **Force refresh**: button to update all integrations on demand
-- 🌐 **Internationalization**: English, Italian, German and French, auto-detects from system (card display + visual editor)
+- 🌐 **Internationalization**: English, Italian, German, French, Polish and Swedish — auto-detects from system (card display + visual editor)
 - 🕐 **Time format**: 12h or 24h, follows system preferences
 - 👆 **Customizable actions**: tap, hold, double-tap (Home Assistant standard)
 - 🪶 **Clean YAML**: only non-default settings are saved
@@ -92,16 +92,12 @@ Both options can be enabled independently — show only one, the other, or both.
 
 ### HACS (recommended)
 
-Calendar & Tasks Card is not yet in the default HACS store. You can add it as a custom repository:
-
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=korova-sq&repository=calendar-tasks-card&category=plugin)
+Calendar & Tasks Card is available in the default HACS store:
 
 1. Open HACS in Home Assistant
-2. Go to **Frontend**
-3. Click the three-dot menu (top right) → **Custom repositories**
-4. Add: `https://github.com/korova-sq/calendar-tasks-card` (Category: **Lovelace**)
-5. Search for **Calendar & Tasks Card** and install
-6. Reload your browser (Ctrl+F5 or Cmd+Shift+R)
+2. Search for **Calendar & Tasks Card**
+3. Click **Download**
+4. Reload your browser (Ctrl+F5 or Cmd+Shift+R)
 
 ### Manual installation
 
@@ -166,12 +162,11 @@ Each entity has a native Home Assistant colour picker where you can choose a the
 | `exclude` | `[]` | List of keywords; events and tasks with titles containing any keyword will be hidden (partial match, case-insensitive) |
 | `include` | `[]` | Allowlist of keywords; when set, ONLY events and tasks whose title contains one of them are shown (partial match, case-insensitive). Applied before `exclude` |
 | `filter_duplicates` | `false` | Hide the same event/task appearing on multiple calendars/lists (events matched by title + start + end + location, tasks by title + due date; first occurrence kept) |
-| `start_days_ahead` | `0` | Shift where the agenda starts: `0` = today, `1` = tomorrow, `7` = in a week. Counts calendar days (future events are never skipped). Overdue and completed are not affected |
 
 ### 🌐 Localization
 | Option | Default | Values |
 |---|---|---|
-| `language` | `auto` | `auto`, `en`, `it`, `de`, `fr` |
+| `language` | `auto` | `auto`, `en`, `it`, `de`, `fr`, `pl`, `sv` |
 | `time_format` | `auto` | `auto`, `24h`, `12h` |
 | `first_day_of_week` | `auto` | `auto`, `monday`, `sunday`, `saturday` |
 
@@ -179,14 +174,12 @@ Each entity has a native Home Assistant colour picker where you can choose a the
 | Option | Default | Description |
 |---|---|---|
 | `month_view` | `false` | Show a monthly calendar grid instead of the agenda list, with event dots, a tap-a-day popup and month navigation |
-| `sort_mode` | `chronological` | How items are ordered within a day: `chronological` (events and tasks mixed by time) or `grouped` (events grouped by calendar, then tasks grouped by list) |
 | `show_week_number` | `false` | ISO 8601 week separators (agenda) / week-number column (grid) |
-| `highlight_weekend` | `true` | Show Saturday/Sunday dates in red |
 | `show_end_time` | `false` | Show `HH:MM–HH:MM` for events |
 | `multi_day_events` | `true` | Show multi-day events on every day they span, with a `(2/6)` day counter |
-| `show_empty_days` | `false` | Show days with no events. When off, `days` counts days that actually have events (the card looks ahead up to ~6 months), so events spread far apart are not hidden |
+| `show_empty_days` | `false` | Show days with no events |
 | `show_relative_time` | `true` | Relative time labels: "Tomorrow", "In 3 days", and — for imminent items with a precise time — "In 3 hours" / "In 45 min" |
-| `event_progress` | `off` | Progress bar for an event currently in progress: `off` or `line` (a thin bar under the event, filled in the calendar's colour). Mutually exclusive with the relative-time label on the same event |
+| `event_progress` | `off` | Progress indicator for an event currently in progress: `off`, `line` (a thin bar under the event) or `bar` (a full-width progress bar, filled in the calendar's colour). Mutually exclusive with the relative-time label on the same event |
 | `show_source` | `false` | Show entity name as subtitle |
 | `show_description` | `true` | Show event/task description |
 | `show_location` | `false` | Show event location with map pin icon (calendar events only) |
@@ -361,6 +354,13 @@ Issues and pull requests are welcome. Please:
 - Test changes against multiple integrations (Local To-do, CalDAV, Google Tasks if possible)
 - Keep the code style consistent with the rest of the file
 - Update the README if you add new options
+
+## 🃏 My other cards
+
+| Card | Description |
+|---|---|
+| [🌤 Sun Weather Card](https://github.com/korova-sq/sun-weather-card) | Sun position, weather forecast and outdoor conditions in one card |
+| [🕐 World Time Card](https://github.com/korova-sq/world-time-card) | Multiple world clocks with timezone support |
 
 ## 📄 License
 
