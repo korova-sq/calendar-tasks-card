@@ -1660,7 +1660,6 @@ const STYLES = `
     color: var(--ctc-hint);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    background: var(--secondary-background-color, rgba(0,0,0,0.03));
     border-top: 1px solid var(--ctc-border);
     border-bottom: 1px solid var(--ctc-border);
   }
