@@ -56,30 +56,42 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 ## 📸 Screenshots
 
-<table align="center">
-<tr>
-<td valign="top" align="center" width="50%"><b>Main view with overdue and completed</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/01-overview.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>🎨 Color picker in the editor</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/02-editor-colors.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>⚙️ Editor sections</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/03-editor-sections.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>📆 Week numbers</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/04-week-numbers.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>📋 Clean agenda view</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/05-agenda-view.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>☀️ Weather support</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/06-weather-support.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>📅 Month view</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/06-month-view.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"><b>📅 Month picker</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/07-month-picker.jpeg" width="100%" /></td>
-</tr>
-<tr>
-<td valign="top" align="center" width="50%"><b>📋 Day popup</b><br><img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/08-day-popup.jpeg" width="100%" /></td>
-<td valign="top" align="center" width="50%"></td>
-</tr>
-</table>
+### Overview
 
-<br>
+<img src="images/01-overview.png" width="250" />
+
+### Event progress
+
+| | |
+|:---:|:---:|
+| <img src="images/10-progress-bar.png" width="250" /> | <img src="images/11-progress-line.png" width="250" /> |
+| `bar` mode | `line` mode |
+
+### Themes
+
+The card automatically follows your Home Assistant theme — light or dark.
+
+| | |
+|:---:|:---:|
+| <img src="images/08-light.png" width="250" /> | <img src="images/09-dark.png" width="250" /> |
+| ☀️ Light theme | 🌙 Dark theme |
+
+### Monthly calendar
+
+<img src="images/05-monthly-calendar.png" width="250" />
+
+| | |
+|:---:|:---:|
+| <img src="images/07-view-events.png" width="250" /> | <img src="images/06-add-events-task.png" width="250" /> |
+| Day popup | Add event / task |
+
+### Tasks view
+
+<img src="images/03-tasks-view.png" width="250" />
+
+### Weather support
+
+<img src="images/04-weather-support.png" width="250" />
 
 Display weather information from any HA `weather.*` entity with two independent options:
 
@@ -87,6 +99,10 @@ Display weather information from any HA `weather.*` entity with two independent 
 - **Per-day weather** (next to each date): icon and temperature for the next 5-7 days. For days beyond the forecast range, a discrete cloud-off icon is shown as placeholder.
 
 Both options can be enabled independently — show only one, the other, or both. Enable them in the **Weather** section of the visual editor.
+
+### Editor — color picker
+
+<img src="images/02-editor-colors.png" width="250" />
 
 ## 📦 Installation
 
