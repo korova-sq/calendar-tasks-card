@@ -1,8 +1,8 @@
 /**
- * calendar-tasks-card v1.13.0
+ * calendar-tasks-card v1.13.1
  */
 
-const CARD_VERSION = "1.13.0";
+const CARD_VERSION = "1.13.1";
 
 
 /* ═══════════════════════════════════════════════════════════════════
