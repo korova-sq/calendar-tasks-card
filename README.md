@@ -13,7 +13,7 @@
 
 <br>
 
-![Calendar & Tasks Card](https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/screenshots/banner.png)
+![Calendar & Tasks Card](https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/banner.png)
 
 <br>
 
