@@ -58,13 +58,13 @@ Most agenda cards on HACS show either calendar events OR todo tasks. This card u
 
 ### Overview
 
-<img src="images/01-overview.png" width="250" />
+<img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/01-overview.png" width="250" />
 
 ### Event progress
 
 | | |
 |:---:|:---:|
-| <img src="images/10-progress-bar.png" width="250" /> | <img src="images/11-progress-line.png" width="250" /> |
+| <img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/10-progress-bar.png" width="250" /> | <img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/11-progress-line.png" width="250" /> |
 | `bar` mode | `line` mode |
 
 ### Themes
@@ -73,25 +73,25 @@ The card automatically follows your Home Assistant theme — light or dark.
 
 | | |
 |:---:|:---:|
-| <img src="images/08-light.png" width="250" /> | <img src="images/09-dark.png" width="250" /> |
+| <img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/08-light.png" width="250" /> | <img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/09-dark.png" width="250" /> |
 | ☀️ Light theme | 🌙 Dark theme |
 
 ### Monthly calendar
 
-<img src="images/05-monthly-calendar.png" width="250" />
+<img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/05-monthly-calendar.png" width="250" />
 
 | | |
 |:---:|:---:|
-| <img src="images/07-view-events.png" width="250" /> | <img src="images/06-add-events-task.png" width="250" /> |
+| <img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/07-view-events.png" width="250" /> | <img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/06-add-events-task.png" width="250" /> |
 | Day popup | Add event / task |
 
 ### Tasks view
 
-<img src="images/03-tasks-view.png" width="250" />
+<img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/03-tasks-view.png" width="250" />
 
 ### Weather support
 
-<img src="images/04-weather-support.png" width="250" />
+<img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/04-weather-support.png" width="250" />
 
 Display weather information from any HA `weather.*` entity with two independent options:
 
@@ -102,7 +102,7 @@ Both options can be enabled independently — show only one, the other, or both.
 
 ### Editor — color picker
 
-<img src="images/02-editor-colors.png" width="250" />
+<img src="https://raw.githubusercontent.com/korova-sq/calendar-tasks-card/main/images/02-editor-colors.png" width="250" />
 
 ## 📦 Installation
 
